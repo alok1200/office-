@@ -21,7 +21,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     setError(null);
 
     try {
-      const location = ['CHECK_IN', 'CHECK_OUT'].includes(action) ? await geofence.getPunchLocation() : {};
+      const location = await geofence.getPunchLocation();
       const res = await api.recordPunch(currentUserId, action, location);
       if (res.success) {
         setMessage(res.message || `Successfully recorded ${action.replace('_', ' ')}`);
@@ -37,8 +37,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
   };
 
   const isCheckInAllowed = currentState === 'NOT_CHECKED_IN' && geofence.eligible;
-  const isStartBreakAllowed = currentState === 'CHECKED_IN';
-  const isEndBreakAllowed = currentState === 'ON_BREAK';
+  const isStartBreakAllowed = currentState === 'CHECKED_IN' && geofence.eligible;
+  const isEndBreakAllowed = currentState === 'ON_BREAK' && geofence.eligible;
   const isCheckOutAllowed = currentState === 'CHECKED_IN' && geofence.eligible;
   const isDayFinished = currentState === 'CHECKED_OUT';
 
@@ -48,7 +48,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
           <p className="text-xs text-slate-600 mt-0.5">
-            Record workday start, breaks, and checkout with sequential state validation
+            Attendance actions are available only while your GPS is within 15 m of the saved office.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -59,11 +59,11 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
 
       <section className="employee-geofence" aria-labelledby="employee-office-title">
         <div className="employee-office-heading"><MapPin size={18} /><h3 id="employee-office-title">{geofence.loading ? 'Loading saved office…' : geofence.office?.name || 'Office not configured'}</h3></div>
-        {geofence.office && <p><span className="office-fixed-marker" aria-hidden="true" />Saved office · Radius {geofence.office.radius_m} m · Maximum accuracy ±{geofence.office.max_accuracy_m ?? 20} m</p>}
+        {geofence.office && <p><span className="office-fixed-marker" aria-hidden="true" />Saved office · Radius {geofence.office.radius_m} m · Maximum accuracy ±{geofence.office.max_accuracy_m ?? 15} m</p>}
         <p id="employee-geofence-status" role="status">{geofence.loading ? 'Loading saved office settings…' : geofence.message}</p>
         {geofence.sample && <p><span className="employee-gps-marker" aria-hidden="true" />Your location · Distance {Math.round(geofence.distance || 0)} m · Accuracy ±{Math.round(geofence.sample.accuracy)} m</p>}
         <div className="employee-geofence-actions"><button type="button" onClick={geofence.refresh} disabled={!canRecord || geofence.reading || geofence.loading}>{geofence.reading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}{geofence.reading ? 'Checking GPS…' : geofence.tracking ? 'Refresh my location' : 'Check my location'}</button>{geofence.tracking && <button type="button" onClick={geofence.stop} disabled={loadingAction !== null}>Stop location updates</button>}</div>
-        <small>The saved office stays fixed. Location updates run only after you choose to check, while this page is visible. Check-in and check-out require a fresh GPS reading inside the office radius.</small>
+        <small>The saved office stays fixed. Location updates run only after you choose to check, while this page is visible. Check-in, check-out, start break and end break all require fresh GPS within 15 m of the saved office.</small>
       </section>
 
       {/* Messages */}

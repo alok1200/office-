@@ -8,7 +8,7 @@ const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['sh
 
 function OfficeForm({ office, data, onClose, onSaved }) {
   const { currentUserId } = useAuth();
-  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: office?.radius_m ?? 15, max_accuracy_m: office?.max_accuracy_m ?? 20, timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
+  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: 15, max_accuracy_m: Math.min(office?.max_accuracy_m ?? 15, 15), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -44,6 +44,7 @@ function OfficeForm({ office, data, onClose, onSaved }) {
         signal: controller.signal,
       });
       if (!mounted.current) return;
+      if (result.coordinates?.accuracy > 15) { setError(`GPS accuracy is ±${Math.round(result.coordinates.accuracy)} m. Move near a window or outdoors and retry; ±15 m or better is required.`); return; }
       if (result.coordinates) setForm(old => ({ ...old, latitude: result.coordinates.latitude, longitude: result.coordinates.longitude }));
       setCaptureNotice([
         result.coordinates ? `Current location captured (GPS accuracy ±${Math.round(result.coordinates.accuracy)} m).` : '',
@@ -75,7 +76,8 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
       <button type="button" className="sa-office-location-action" onClick={locate} disabled={saving || locating}>{locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{locating ? 'Reading current location…' : 'Use my current location'}</button>
       {captureNotice && <p className="sa-office-capture-notice" role="status">{captureNotice}</p>}
-      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" min={1} max={100000} step={1} value={form.radius_m} onChange={e => change('radius_m', e.target.value)} required disabled={saving} /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={10000} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
+      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={15} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={15} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
+      <p id="office-radius-help" className="sa-office-form-help">The attendance boundary is fixed at 15 m. All attendance actions require GPS accuracy of ±15 m or better. Use your current location here, then Save office to set the company location. Employee GPS never moves the saved office.</p>
       <label htmlFor="sa-office-zone">Timezone</label><input id="sa-office-zone" list="sa-office-timezones" value={form.timezone} onChange={e => change('timezone', e.target.value)} required disabled={saving} /><datalist id="sa-office-timezones">{['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Europe/London', 'America/New_York'].map(zone => <option key={zone} value={zone} />)}</datalist>
       <label htmlFor="sa-office-address">Address</label><input id="sa-office-address" value={form.address} onChange={e => change('address', e.target.value)} maxLength={500} disabled={saving} />
       <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={close} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving || locating}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save office'}</button></div>

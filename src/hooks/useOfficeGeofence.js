@@ -15,6 +15,7 @@ export function useOfficeGeofence(enabled) {
   const [error, setError] = useState('');
   const [reading, setReading] = useState(false);
   const [tracking, setTracking] = useState(false);
+  const [clock, setClock] = useState(Date.now());
   const [visible, setVisible] = useState(document.visibilityState === 'visible');
   const sequence = useRef(0), mounted = useRef(true), activeUser = useRef(currentUserId);
   activeUser.current = currentUserId;
@@ -60,8 +61,14 @@ export function useOfficeGeofence(enabled) {
     } catch (error) { if (mounted.current && ticket === sequence.current) { setSample(null); setError(error.message); } }
     finally { if (mounted.current) setReading(false); }
   };
+  useEffect(() => {
+    if (!enabled || !tracking || !visible) return;
+    const timer = setInterval(() => setClock(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [enabled, tracking, visible]);
+  const stale = !!sample && Math.max(clock, Date.now()) - sample.readAt > 20000;
   const evaluation = evaluateLocation(officeState.office, sample);
-  const eligible = enabled && tracking && visible && !!sample && !error && !officeState.error && evaluation.eligible;
+  const eligible = enabled && tracking && visible && !!sample && !error && !officeState.error && !stale && evaluation.eligible;
   const getPunchLocation = async () => {
     // Always obtain a new reading and saved office before a consequential punch.
     const actor = currentUserId;
@@ -74,5 +81,5 @@ export function useOfficeGeofence(enabled) {
     if (!evaluation.eligible) throw new Error(evaluation.message);
     return { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy };
   };
-  return { ...officeState, sample, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || evaluation.message, refresh, getPunchLocation, stop: () => { sequence.current++; setTracking(false); setSample(null); setError(''); } };
+  return { ...officeState, sample, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; setTracking(false); setSample(null); setError(''); } };
 }
