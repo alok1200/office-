@@ -4,6 +4,7 @@ import { NotificationsProvider } from './context/NotificationsContext';
 import { Layout } from './components/Layout/Layout';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { HRDashboardPage } from './pages/HRDashboardPage';
 import { CalendarPage } from './pages/CalendarPage';
 import { MyRequestsPage } from './pages/MyRequestsPage';
 import { HREmployeesPage } from './pages/HREmployeesPage';
@@ -25,9 +26,14 @@ function AppContent() {
   // Whenever user changes or signs in, reset to appropriate initial tab
   useEffect(() => {
     if (currentUser) {
-      setCurrentTab('dashboard');
+      // Set default tab based on role
+      if (isHR) {
+        setCurrentTab('hr-dashboard');
+      } else {
+        setCurrentTab('dashboard');
+      }
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, isHR]);
 
   if (loading) {
     return (
@@ -74,8 +80,8 @@ function AppContent() {
     switch (currentTab) {
       case 'admin':
         return <SuperAdminSettings setTab={setCurrentTab} />;
-      case 'dashboard':
-        return <DashboardPage setTab={setCurrentTab} />;
+      case 'hr-dashboard':
+        return <HRDashboardPage setTab={setCurrentTab} />;
       case 'calendar':
         return <CalendarPage />;
       case 'my-requests':
