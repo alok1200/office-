@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
 import { evaluateLocation } from '../services/geofenceStatus';
+import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
-
-const readPosition = () => new Promise((resolve, reject) => {
-  if (!navigator.geolocation) { reject(new Error('GPS is not supported. Use a device with location access.')); return; }
-  navigator.geolocation.getCurrentPosition(position => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, readAt: Date.now() }), error => reject(new Error(error.code === 1 ? 'Location access denied. Allow GPS to check in or out.' : 'Could not read GPS. Refresh your location and try again.')), { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
-});
 
 export function useOfficeGeofence(enabled) {
   const { currentUserId } = useAuth();
@@ -17,6 +13,7 @@ export function useOfficeGeofence(enabled) {
   const [tracking, setTracking] = useState(false);
   const [clock, setClock] = useState(Date.now());
   const [visible, setVisible] = useState(document.visibilityState === 'visible');
+  const locationRequest = useRef(null);
   const sequence = useRef(0), mounted = useRef(true), activeUser = useRef(currentUserId);
   activeUser.current = currentUserId;
   const loadOffice = useCallback(async () => {
@@ -32,10 +29,10 @@ export function useOfficeGeofence(enabled) {
     mounted.current = true; setSample(null); setTracking(false); setError('');
     setOfficeState({ loading: true, office: null, error: '' });
     if (enabled) loadOffice();
-    return () => { mounted.current = false; sequence.current++; };
+    return () => { mounted.current = false; sequence.current++; locationRequest.current?.abort(); };
   }, [enabled, currentUserId, loadOffice]);
   useEffect(() => {
-    const changed = () => { const next = document.visibilityState === 'visible'; setVisible(next); setSample(null); sequence.current++; if (next && enabled) loadOffice(); };
+    const changed = () => { const next = document.visibilityState === 'visible'; setVisible(next); setSample(null); sequence.current++; if (!next) locationRequest.current?.abort(); if (next && enabled) loadOffice(); };
     document.addEventListener('visibilitychange', changed);
     return () => { document.removeEventListener('visibilitychange', changed); };
   }, [enabled, loadOffice]);
@@ -51,12 +48,14 @@ export function useOfficeGeofence(enabled) {
   const refresh = async () => {
     if (!enabled || reading) return;
     const ticket = ++sequence.current;
+    locationRequest.current?.abort();
+    const controller = new AbortController(); locationRequest.current = controller;
     setReading(true); setError('');
     try {
       const office = await loadOffice();
       if (!mounted.current || ticket !== sequence.current) return;
       if (!office) throw new Error('No saved office is available. Contact your administrator.');
-      const location = await readPosition();
+      const location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal });
       if (mounted.current && ticket === sequence.current) { setSample(location); setTracking(true); }
     } catch (error) { if (mounted.current && ticket === sequence.current) { setSample(null); setError(error.message); } }
     finally { if (mounted.current) setReading(false); }
@@ -72,14 +71,18 @@ export function useOfficeGeofence(enabled) {
   const getPunchLocation = async () => {
     // Always obtain a new reading and saved office before a consequential punch.
     const actor = currentUserId;
+    if (!enabled || !mounted.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled. Keep your signed-in attendance page open and retry.');
+    locationRequest.current?.abort();
+    const controller = new AbortController(); locationRequest.current = controller;
     const office = await loadOffice();
+    if (!mounted.current || actor !== activeUser.current || controller.signal.aborted) throw new Error('Attendance cancelled because the page or account changed.');
     if (!office) throw new Error('No saved office is available. Contact your administrator.');
-    const location = await readPosition();
+    const location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50) });
     if (!mounted.current || actor !== activeUser.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled because the signed-in account changed.');
     const evaluation = evaluateLocation(office, location);
     if (mounted.current) { setSample(location); }
     if (!evaluation.eligible) throw new Error(evaluation.message);
     return { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy };
   };
-  return { ...officeState, sample, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; setTracking(false); setSample(null); setError(''); } };
+  return { ...officeState, sample, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; locationRequest.current?.abort(); setTracking(false); setSample(null); setError(''); } };
 }

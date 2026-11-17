@@ -1,99 +1,39 @@
 import React, { useState } from 'react';
 import { useNotifications } from '../context/NotificationsContext';
-import { Bell, CheckCircle, Clock, Sparkles, MessageSquare, Check, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Bell, CheckCircle, Clock, Sparkles, MessageSquare, Check, RefreshCw, ArrowRight, Inbox } from 'lucide-react';
 
-export function NotificationsPage() {
-  const { notifications, loading, error, refresh, markAsRead } = useNotifications();
+const categories = { ATTENDANCE: { icon: Clock, label: 'Attendance' }, REQUEST: { icon: CheckCircle, label: 'Request update' }, HOLIDAY: { icon: Sparkles, label: 'Holiday' }, ANNOUNCEMENT: { icon: MessageSquare, label: 'Announcement' } };
+const timestamp = value => {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? 'Date unavailable' : parsed.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+};
+export function NotificationsPage({ setTab }) {
+  const { notifications, unreadCount, loading, error, refresh, markAsRead } = useNotifications();
+  const { isHR, isSuperAdmin } = useAuth();
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(null);
-  const fetchNotifications = () => refresh();
+  const [filter, setFilter] = useState('ALL');
   const handleMarkAsRead = async id => {
     setMarking(id); setActionError('');
     try { await markAsRead(id); }
     catch (error) { setActionError(error.message); }
     finally { setMarking(null); }
   };
-
-  const getCategoryIcon = (category) => {
-    switch (category) {
-      case 'ATTENDANCE': return <Clock className="w-4 h-4 text-blue-600" />;
-      case 'REQUEST': return <CheckCircle className="w-4 h-4 text-blue-600" />;
-      case 'HOLIDAY': return <Sparkles className="w-4 h-4 text-blue-600" />;
-      default: return <MessageSquare className="w-4 h-4 text-blue-600" />;
-    }
-  };
-
-  return (
-    <div className="space-y-6 bg-white text-black">
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-black flex items-center gap-2">
-            <Bell className="w-5 h-5 text-blue-600" />
-            <span>Notifications & Company Announcements</span>
-          </h2>
-          <p className="text-xs text-slate-600 font-medium mt-1">
-            Stay informed with attendance updates, request status approvals, and announcements
-          </p>
-        </div>
-        <button
-          onClick={fetchNotifications}
-          className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-blue-600 transition-colors shadow-2xs"
-          title="Refresh Notifications"
-        >
-          <RefreshCw className="w-4 h-4 text-blue-600" />
-        </button>
-      </div>
-
-      {(error || actionError) && <p role="alert" className="text-sm">{actionError || error} <button onClick={fetchNotifications} className="underline">Retry</button></p>}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden divide-y divide-slate-100">
-        {loading ? (
-          <div className="p-12 text-center text-slate-500 font-medium text-xs">
-            Loading notifications...
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 font-medium text-xs">
-            No notifications available.
-          </div>
-        ) : (
-          notifications.map((n) => (
-            <div
-              key={n.id}
-              className={`p-5 flex items-start justify-between gap-4 transition-colors ${
-                n.is_read ? 'bg-white' : 'bg-blue-50/20'
-              }`}
-            >
-              <div className="flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-white border border-slate-200 shadow-2xs shrink-0 mt-0.5">
-                  {getCategoryIcon(n.category)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-sm font-black text-black">{n.title}</h4>
-                    {!n.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-700 mt-1 leading-relaxed font-medium">{n.message}</p>
-                  <span className="text-[10px] text-slate-500 mt-1.5 block font-medium">
-                    {new Date(n.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
-                  </span>
-                </div>
-              </div>
-
-              {!n.is_read && (
-                <button
-                  onClick={() => handleMarkAsRead(n.id)}
-                  disabled={marking !== null}
-                  className="px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-blue-50 text-[11px] font-bold text-black flex items-center gap-1.5 shrink-0 shadow-2xs"
-                >
-                  <Check className="w-3 h-3 text-blue-600" />
-                  <span>{marking === n.id ? 'Saving…' : 'Mark read'}</span>
-                </button>
-              )}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
+  const shown = notifications.filter(item => filter !== 'UNREAD' || !item.is_read);
+  return <div className="space-y-6">
+    <header className="inbox-heading"><div><h1><Bell size={23} />Notifications <span className="inbox-count">{unreadCount} unread</span></h1><p>Your request responses, attendance updates and company announcements.</p></div><button type="button" className="ui-icon-button" onClick={() => refresh()} disabled={loading} aria-label="Refresh notifications"><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button></header>
+    <div className="inbox-toolbar" role="group" aria-label="Filter notifications"><button type="button" aria-pressed={filter === 'ALL'} onClick={() => setFilter('ALL')}>All notifications <span>{notifications.length}</span></button><button type="button" aria-pressed={filter === 'UNREAD'} onClick={() => setFilter('UNREAD')}>Unread <span>{unreadCount}</span></button></div>
+    {(error || actionError) && <p role="alert" className="sa-info">{actionError || error}<button type="button" className="sa-text-button" onClick={() => { setActionError(''); refresh(); }}>Retry</button></p>}
+    <section className="notification-list" aria-label="Notification inbox" aria-busy={loading}>
+      {loading ? <p role="status" className="sa-empty">Loading notifications…</p> : !shown.length ? <div className="inbox-empty"><Inbox size={32} /><h2>{filter === 'UNREAD' ? 'You’re all caught up' : 'No notifications yet'}</h2><p>{filter === 'UNREAD' ? 'You have no unread notifications.' : 'New updates will appear here automatically.'}</p></div> : shown.map(item => {
+        const { icon: Icon, label } = categories[item.category] || categories.ANNOUNCEMENT;
+        return <article key={item.id} className={`notification-item ${item.is_read ? '' : 'is-unread'}`}>
+          <span className="inbox-category-icon"><Icon size={21} /></span>
+          <div className="notification-content"><div className="notification-meta"><span>{label}</span><time dateTime={item.created_at}>{timestamp(item.created_at)}</time>{!item.is_read && <strong className="notification-unread-label">Unread</strong>}</div><h2>{item.title}</h2><p>{item.message}</p>{item.category === 'REQUEST' && setTab && <button type="button" className="sa-text-button mt-2" onClick={() => setTab(!isHR && !isSuperAdmin ? 'responses' : 'my-requests')}>{!isHR && !isSuperAdmin ? 'View my responses' : 'View my requests'}<ArrowRight size={15} /></button>}</div>
+          {!item.is_read ? <button type="button" className="notification-read-button" onClick={() => handleMarkAsRead(item.id)} disabled={marking !== null} aria-label={`Mark as read: ${item.title}`}><Check size={15} />{marking === item.id ? 'Saving…' : 'Mark read'}</button> : <span className="notification-read-status"><Check size={14} />Read</span>}
+        </article>;
+      })}
+    </section>
+  </div>;
 }

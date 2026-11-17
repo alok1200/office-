@@ -53,13 +53,14 @@ export function SuperAdminDashboard({ setTab }) {
   const config = useResource(api.getSuperAdminDashboard, currentUserId);
   const team = useResource(api.getCompanyAttendance, currentUserId);
   const requests = useResource(api.getMyRequests, currentUserId);
-  const recent = useResource(getRecent, currentUserId);
+// const recent = useResource(getRecent, currentUserId); // Super Admin does not track personal attendance
   const profile = useResource(api.getMyProfile, currentUserId);
   const profileData = profile.data;
   const complete = profileData && ['first_name', 'last_name', 'email', 'employee_id', 'department_name', 'designation'].every(key => !!profileData[key]);
   const teamRows = team.data || [];
   const requestRows = requests.data || [];
-  const recentRows = recent.data || [];
+const recent = { data: [], loading: false, error: null, refresh: () => {} }; // placeholder (Super Admin has no personal attendance)
+  const recentRows = [];
   return <div className="sa-dashboard sa-dashboard-reference">
     <h1 className="sr-only">Super Admin Dashboard</h1>
     {config.data?.demo && <div className="sa-dashboard-data-label"><ShieldCheck size={11} /> Local demo data</div>}

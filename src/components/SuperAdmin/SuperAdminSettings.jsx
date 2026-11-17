@@ -2,17 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Clock3, CalendarDays, Loader2, MapPin, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import { GeofenceMapPanel } from './GeofenceMapPanel';
 import { captureOfficeLocation } from './captureOfficeLocation';
 
 const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['shifts', 'Shifts', Clock3], ['holidays', 'Holidays', CalendarDays]];
 
 function OfficeForm({ office, data, onClose, onSaved }) {
   const { currentUserId } = useAuth();
-  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: 15, max_accuracy_m: Math.min(office?.max_accuracy_m ?? 15, 15), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
+  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: 15, max_accuracy_m: Math.min(office?.max_accuracy_m ?? 50, 50), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
   const [captureNotice, setCaptureNotice] = useState('');
+  const [showPinMap, setShowPinMap] = useState(false);
   const capturing = useRef(false), captureRequest = useRef(null);
   const panel = useRef(null), busy = useRef(false), mounted = useRef(true);
   const close = () => { if (!busy.current) onClose(); };
@@ -36,7 +38,7 @@ function OfficeForm({ office, data, onClose, onSaved }) {
     if (capturing.current || busy.current) return;
     capturing.current = true; setLocating(true); setError(''); setCaptureNotice('');
     const controller = new AbortController(); captureRequest.current = controller;
-    const timeout = setTimeout(() => controller.abort(), 15000);
+    const timeout = setTimeout(() => controller.abort(), 25000);
     try {
       const result = await captureOfficeLocation({
         geolocation: navigator.geolocation,
@@ -55,6 +57,12 @@ function OfficeForm({ office, data, onClose, onSaved }) {
     finally { clearTimeout(timeout); capturing.current = false; captureRequest.current = null; if (mounted.current) setLocating(false); }
   };
   const locate = () => capture();
+  const pickOfficePoint = ({ latitude, longitude }) => {
+    if (busy.current || capturing.current) return;
+    setForm(old => ({ ...old, latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) }));
+    setError('');
+    setCaptureNotice('Office pin adjusted on the map. This is a draft; press Save office to apply it.');
+  };
   const save = async event => {
     event.preventDefault(); if (busy.current || capturing.current) return;
     busy.current = true; setSaving(true); setError('');
@@ -75,9 +83,11 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       <label htmlFor="sa-office-name">Office name</label><input id="sa-office-name" value={form.name} onChange={e => change('name', e.target.value)} required maxLength={150} disabled={saving} />
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
       <button type="button" className="sa-office-location-action" onClick={locate} disabled={saving || locating}>{locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{locating ? 'Reading current location…' : 'Use my current location'}</button>
+      <button type="button" className="sa-location-button" onClick={() => setShowPinMap(value => !value)} aria-expanded={showPinMap} aria-controls="office-pin-map" disabled={saving || locating}><MapPin size={15} />{showPinMap ? 'Hide office pin map' : 'Adjust office pin on map'}</button>
+      {showPinMap && <div id="office-pin-map"><GeofenceMapPanel office={form} onOfficePick={pickOfficePoint} disabled={saving || locating} /></div>}
       {captureNotice && <p className="sa-office-capture-notice" role="status">{captureNotice}</p>}
-      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={15} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={15} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
-      <p id="office-radius-help" className="sa-office-form-help">The attendance boundary is fixed at 15 m. All attendance actions require GPS accuracy of ±15 m or better. Use your current location here, then Save office to set the company location. Employee GPS never moves the saved office.</p>
+      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={15} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={50} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
+      <p id="office-radius-help" className="sa-office-form-help">The attendance boundary is fixed at 15 m. Attendance GPS accuracy is configured separately, up to ±50 m. The reported position must still be within 15 m; accuracy does not widen this boundary. Use accurate GPS, select your building on the map, or enter verified coordinates; then press Save office. Employee GPS never moves the saved office.</p>
       <label htmlFor="sa-office-zone">Timezone</label><input id="sa-office-zone" list="sa-office-timezones" value={form.timezone} onChange={e => change('timezone', e.target.value)} required disabled={saving} /><datalist id="sa-office-timezones">{['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Europe/London', 'America/New_York'].map(zone => <option key={zone} value={zone} />)}</datalist>
       <label htmlFor="sa-office-address">Address</label><input id="sa-office-address" value={form.address} onChange={e => change('address', e.target.value)} maxLength={500} disabled={saving} />
       <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={close} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving || locating}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save office'}</button></div>

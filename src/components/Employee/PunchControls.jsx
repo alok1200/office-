@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
 import { StatusBadge } from '../Common/StatusBadge';
-import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2, MapPin, RefreshCw } from 'lucide-react';
+import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export function PunchControls({ todayData, onRefresh, loading = false }) {
   const { currentUserId, currentUser } = useAuth();
@@ -36,10 +36,10 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     }
   };
 
-  const isCheckInAllowed = currentState === 'NOT_CHECKED_IN' && geofence.eligible;
-  const isStartBreakAllowed = currentState === 'CHECKED_IN' && geofence.eligible;
-  const isEndBreakAllowed = currentState === 'ON_BREAK' && geofence.eligible;
-  const isCheckOutAllowed = currentState === 'CHECKED_IN' && geofence.eligible;
+  const isCheckInAllowed = currentState === 'NOT_CHECKED_IN';
+  const isStartBreakAllowed = currentState === 'CHECKED_IN';
+  const isEndBreakAllowed = currentState === 'ON_BREAK';
+  const isCheckOutAllowed = currentState === 'CHECKED_IN';
   const isDayFinished = currentState === 'CHECKED_OUT';
 
   return (
@@ -47,8 +47,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200">
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
-          <p className="text-xs text-slate-600 mt-0.5">
-            Attendance actions are available only while your GPS is within 15 m of the saved office.
+          <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
+            Your location is verified when you press an attendance button. You must be within 15 m of the saved office.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -57,14 +57,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       </div>
 
-      <section className="employee-geofence" aria-labelledby="employee-office-title">
-        <div className="employee-office-heading"><MapPin size={18} /><h3 id="employee-office-title">{geofence.loading ? 'Loading saved office…' : geofence.office?.name || 'Office not configured'}</h3></div>
-        {geofence.office && <p><span className="office-fixed-marker" aria-hidden="true" />Saved office · Radius {geofence.office.radius_m} m · Maximum accuracy ±{geofence.office.max_accuracy_m ?? 15} m</p>}
-        <p id="employee-geofence-status" role="status">{geofence.loading ? 'Loading saved office settings…' : geofence.message}</p>
-        {geofence.sample && <p><span className="employee-gps-marker" aria-hidden="true" />Your location · Distance {Math.round(geofence.distance || 0)} m · Accuracy ±{Math.round(geofence.sample.accuracy)} m</p>}
-        <div className="employee-geofence-actions"><button type="button" onClick={geofence.refresh} disabled={!canRecord || geofence.reading || geofence.loading}>{geofence.reading ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}{geofence.reading ? 'Checking GPS…' : geofence.tracking ? 'Refresh my location' : 'Check my location'}</button>{geofence.tracking && <button type="button" onClick={geofence.stop} disabled={loadingAction !== null}>Stop location updates</button>}</div>
-        <small>The saved office stays fixed. Location updates run only after you choose to check, while this page is visible. Check-in, check-out, start break and end break all require fresh GPS within 15 m of the saved office.</small>
-      </section>
+      {/* GPS is checked on attendance actions; the full GPS panel is Super Admin only. */}
+      {loadingAction && <p role="status" className="mt-4 text-sm text-slate-600">Verifying your location and recording attendance…</p>}
 
       {/* Messages */}
       {message && (
@@ -75,7 +69,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       )}
 
       {error && (
-        <div className="mt-4 p-3.5 rounded-xl bg-white border border-rose-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs">
+        <div role="alert" className="mt-4 p-3.5 rounded-xl bg-white border border-rose-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs">
           <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="font-semibold text-rose-700">{error}</span>
         </div>
@@ -93,8 +87,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         {/* 1. Check In */}
         <button
           onClick={() => handlePunch('CHECK_IN')}
-          aria-describedby="employee-geofence-status"
-          title={geofence.eligible ? 'Check in at the saved office' : geofence.message}
+          aria-describedby="attendance-location-policy"
+          title="Verify your location and check in"
           disabled={!isCheckInAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isCheckInAllowed && canRecord
@@ -149,8 +143,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         {/* 4. Check Out */}
         <button
           onClick={() => handlePunch('CHECK_OUT')}
-          aria-describedby="employee-geofence-status"
-          title={geofence.eligible ? 'Check out at the saved office' : geofence.message}
+          aria-describedby="attendance-location-policy"
+          title="Verify your location and check out"
           disabled={!isCheckOutAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isCheckOutAllowed && canRecord

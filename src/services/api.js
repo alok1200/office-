@@ -144,9 +144,9 @@ export const api = {
   },
 
   // Requests
-  getMyRequests: async (userId) => {
+  getMyRequests: async (userId, signal) => {
     const res = await fetch(`${API_BASE}/requests/my`, {
-      headers: getHeaders(userId)
+      signal, headers: getHeaders(userId)
     });
     return res.json();
   },

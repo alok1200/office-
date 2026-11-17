@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HRDashboardPage } from './pages/HRDashboardPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { ResponsesPage } from './pages/ResponsesPage';
 import { MyRequestsPage } from './pages/MyRequestsPage';
 import { HREmployeesPage } from './pages/HREmployeesPage';
 import { HRAttendancePage } from './pages/HRAttendancePage';
@@ -96,8 +97,10 @@ function AppContent() {
         return <HRCompanyRequestsPage />;
       case 'holidays':
         return <HolidaysPage />;
+      case 'responses':
+        return !isHR && !isSuperAdmin ? <ResponsesPage /> : <p role="alert">This page is for employee request responses.</p>;
       case 'notifications':
-        return <NotificationsPage />;
+        return <NotificationsPage setTab={setCurrentTab} />;
       case 'profile':
         return <ProfilePage />;
       case 'office-location':

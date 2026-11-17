@@ -14,7 +14,7 @@ import {
   CalendarDays,
   Shield,
   Building2,
-  MapPin,
+  MessageSquare,
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, setTab }) {
@@ -24,9 +24,7 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'my-requests', label: 'Requests', icon: FileText },
-    { id: 'team', label: 'Team', icon: Users },
-    { id: 'approvals', label: 'Approvals', icon: Shield },
-    { id: 'reports', label: 'Reports', icon: Clock },
+    { id: 'responses', label: 'Responses', icon: MessageSquare },
     { id: 'admin', label: 'Admin', icon: Building2 },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
