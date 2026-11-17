@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '../../context/AuthContext';
 import { Header } from './Header';
@@ -7,8 +7,17 @@ export function Layout({ currentTab, setTab, children }) {
   const { isSuperAdmin } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const handleEscape = (event) => { if (event.key === 'Escape') setMobileMenuOpen(false); };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleEscape);
+    return () => { window.removeEventListener('keydown', handleEscape); document.body.style.overflow = previousOverflow; };
+  }, [mobileMenuOpen]);
+
   return (
-    <div className={`${isSuperAdmin ? 'sa-portal' : ''} min-h-screen flex bg-white text-black`}>
+    <div className={`${isSuperAdmin ? 'sa-portal' : ''} app-shell`}>
       {/* Desktop Sidebar */}
       <div className="hidden md:flex shrink-0">
         <Sidebar currentTab={currentTab} setTab={setTab} />
@@ -17,7 +26,9 @@ export function Layout({ currentTab, setTab, children }) {
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <div
+          <button
+            type="button"
+            aria-label="Close navigation menu"
             className="fixed inset-0 bg-black/40 backdrop-blur-xs"
             onClick={() => setMobileMenuOpen(false)}
           />
@@ -34,12 +45,12 @@ export function Layout({ currentTab, setTab, children }) {
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen bg-white">
+      <div className="app-main flex flex-col min-h-screen">
         <Header
           onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)}
           setTab={setTab}
         />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto bg-white text-black animate-in fade-in duration-150">
+        <main className="app-content flex-1">
           {children}
         </main>
       </div>

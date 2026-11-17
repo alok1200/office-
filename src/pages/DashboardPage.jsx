@@ -31,7 +31,7 @@ export function DashboardPage({ setTab }) {
   }, [currentUserId, isSuperAdmin]);
 
   return (
-    <div className="space-y-6 bg-[#F8FAFC] text-black">
+    <div className="space-y-6 bg-white text-black">
       {/* Employee Workday Section */}
       {isSuperAdmin && <SuperAdminDashboard setTab={setTab} />}
       {!isSuperAdmin && !isHR && (
@@ -58,9 +58,10 @@ export function DashboardPage({ setTab }) {
           {/* Quick Links for Employee */}
           {!isHR && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              <div
+              <button
+                type="button"
                 onClick={() => setTab('calendar')}
-                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex items-center justify-between group text-left"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs group-hover:scale-105 transition-transform">
@@ -72,10 +73,11 @@ export function DashboardPage({ setTab }) {
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
-              </div>
-              <div
+              </button>
+              <button
+                type="button"
                 onClick={() => setTab('my-requests')}
-                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex items-center justify-between group"
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer flex items-center justify-between group text-left"
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-white border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs group-hover:scale-105 transition-transform">
@@ -87,7 +89,7 @@ export function DashboardPage({ setTab }) {
                   </div>
                 </div>
                 <ArrowRight className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
-              </div>
+              </button>
             </div>
           )}
         </section>

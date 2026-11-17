@@ -63,7 +63,7 @@ export function MyRequestsPage() {
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-blue-600 hover:bg-blue-50 text-black text-xs font-black shadow-xs active:scale-[0.98] transition-all"
+          className="ui-button-primary"
         >
           <Plus className="w-4 h-4 text-blue-600" />
           <span>New Request</span>

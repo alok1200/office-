@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CompanyLogo } from '../components/Common/CompanyLogo';
 import { useAuth } from '../context/AuthContext';
 import {
   Building2,
@@ -65,41 +66,18 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white text-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      {/* Brand Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-white border-2 border-blue-600 shadow-md shadow-blue-500/10 mb-4">
-          <Building2 className="w-8 h-8 text-blue-600" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-black text-black font-mono tracking-wider">
-          KNOOVIQ
-        </h1>
-        <p className="text-xs sm:text-sm font-bold text-blue-600 uppercase tracking-widest mt-0.5">
-          Workforce Attendance
-        </p>
-      </div>
-
-      {/* Main Login Card */}
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md px-4 sm:px-0">
-        <div className="bg-white py-8 px-6 sm:px-10 rounded-3xl border border-slate-200 shadow-xl space-y-6">
-          <div className="text-center sm:text-left">
-            <h2 className="text-xl font-black text-black">Welcome Back</h2>
-            <p className="text-xs text-slate-600 font-medium mt-1">
-              Sign in to your KNOOVIQ account to access attendance & workforce management
-            </p>
-          </div>
-
-          {/* Inline Error Area */}
-          {errorMessage && (
-            <div
-              role="alert"
-              className="p-3.5 rounded-xl bg-white border-2 border-rose-300 text-black text-xs flex items-start gap-2.5 shadow-2xs animate-in fade-in"
-            >
-              <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-              <span className="font-semibold">{errorMessage}</span>
-            </div>
-          )}
-
+    <div className="login-page">
+      <section className="login-brand-panel" aria-label="KNOOVIQ Workforce Attendance">
+        <div className="login-brand-mark"><CompanyLogo variant="signin" /></div>
+        <h1>Your workday.<br />All in one place.</h1>
+        <p>Attendance, leave and team management. A clear view of your day, wherever work takes you.</p>
+        <div className="login-brand-caption"><ShieldCheck size={20} /><span>Your company workspace</span></div>
+      </section>
+      <section className="login-form-panel">
+        <div className="login-card">
+          <h2>Welcome back</h2>
+          <p className="login-intro">Sign in to your KNOOVIQ account to manage your workday.</p>
+          {errorMessage && <div role="alert" className="sa-info mb-5"><AlertCircle size={18} /><span>{errorMessage}</span></div>}
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
             {/* Field 1: Email Address / Employee ID */}
             <div>
@@ -122,7 +100,7 @@ export function LoginPage() {
                       setValidationErrors(prev => ({ ...prev, identifier: '' }));
                     }
                   }}
-                  placeholder="e.g. alex.morgan@knooviq.com or KNV-1001"
+                  placeholder="Enter your email or employee ID"
                   className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600 bg-white text-black transition-all ${
                     validationErrors.identifier
                       ? 'border-rose-400 focus:ring-rose-500'
@@ -195,30 +173,24 @@ export function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white border-2 border-blue-600 hover:bg-blue-50 active:scale-[0.99] text-black text-sm font-black shadow-xs disabled:opacity-50 disabled:cursor-not-allowed transition-all mt-6"
+              className="ui-button-primary mt-6"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
                 </>
               ) : (
                 <>
-                  <ShieldCheck className="w-4 h-4 text-blue-600" />
+                  <ShieldCheck className="w-4 h-4" />
                   <span>Sign In</span>
                 </>
               )}
             </button>
           </form>
-
-
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="mt-8 text-center text-xs text-slate-500">
-        <p>&copy; 2026 KNOOVIQ Inc. Secure Workforce Attendance & Time-Management.</p>
-      </div>
+        <footer className="login-footer">&copy; {new Date().getFullYear()} KNOOVIQ Industries Pvt Ltd.<br />Workforce attendance &amp; time management.</footer>
+      </section>
     </div>
   );
 }

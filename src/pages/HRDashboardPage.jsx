@@ -1,12 +1,15 @@
-// src/pages/HRDashboardPage.jsx
 import React from 'react';
+import { FileText } from 'lucide-react';
+import { HRSummaryCards } from '../components/HR/HRSummaryCards';
+import { CompanyAttendanceTable } from '../components/HR/CompanyAttendanceTable';
 
-// Placeholder HR Overview Dashboard – you can replace with real HR widgets later
-export function HRDashboardPage() {
-  return (
-    <div className="p-6 bg-[#F8FAFC] min-h-screen">
-      <h2 className="text-2xl font-black text-[#0F172A] mb-4">HR Overview Dashboard (placeholder)</h2>
-      <p className="text-sm text-[#64748B]">Add HR summary cards, team status, and request queues here.</p>
+export function HRDashboardPage({ setTab }) {
+  return <div className="space-y-6">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div><h1 className="text-2xl font-semibold text-black">HR overview</h1><p className="text-sm text-slate-600 mt-1">Your team’s attendance and daily activity, in one view.</p></div>
+      <button type="button" className="ui-button-primary" onClick={() => setTab('hr-company-requests')}><FileText size={18} />Employee requests</button>
     </div>
-  );
+    <HRSummaryCards />
+    <CompanyAttendanceTable />
+  </div>;
 }

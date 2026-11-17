@@ -17,6 +17,7 @@ import { AdminApprovalsPage } from './pages/AdminApprovalsPage';
 import { SuperAdminRequestsPage } from './components/SuperAdmin/SuperAdminRequestsPage';
 import { SuperAdminReportsPage } from './components/SuperAdmin/SuperAdminReportsPage';
 import { SuperAdminSettings } from './components/SuperAdmin/SuperAdminSettings';
+import { CompanyLogo } from './components/Common/CompanyLogo';
 import { Loader2 } from 'lucide-react';
 
 function AppContent() {
@@ -39,9 +40,10 @@ function AppContent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white text-black">
         <div className="flex flex-col items-center gap-3">
+          <CompanyLogo variant="loading" />
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
           <p className="text-xs font-black tracking-wider uppercase text-black">
-            Initializing KNOOVIQ Workforce Attendance...
+            Loading your workspace…
           </p>
         </div>
       </div>

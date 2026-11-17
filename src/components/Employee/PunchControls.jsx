@@ -88,7 +88,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       )}
 
-      {/* Punch Action Buttons: White background, Black text, Blue icons */}
+      {/* Available actions use blue; unavailable actions remain disabled. */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-5">
         {/* 1. Check In */}
         <button
@@ -98,7 +98,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
           disabled={!isCheckInAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isCheckInAllowed && canRecord
-              ? 'bg-white hover:bg-blue-50 text-black border-2 border-blue-600 hover:border-blue-700 active:scale-[0.98]'
+              ? 'ui-button-primary'
               : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
           }`}
         >
@@ -116,7 +116,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
           disabled={!isStartBreakAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isStartBreakAllowed && canRecord
-              ? 'bg-white hover:bg-blue-50 text-black border-2 border-blue-600 hover:border-blue-700 active:scale-[0.98]'
+              ? 'ui-button-primary'
               : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
           }`}
         >
@@ -134,7 +134,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
           disabled={!isEndBreakAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isEndBreakAllowed && canRecord
-              ? 'bg-white hover:bg-blue-50 text-black border-2 border-blue-600 hover:border-blue-700 active:scale-[0.98]'
+              ? 'ui-button-primary'
               : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
           }`}
         >
@@ -154,7 +154,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
           disabled={!isCheckOutAllowed || loadingAction !== null || !canRecord}
           className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
             isCheckOutAllowed && canRecord
-              ? 'bg-white hover:bg-blue-50 text-black border-2 border-blue-600 hover:border-blue-700 active:scale-[0.98]'
+              ? 'ui-button-primary'
               : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
           }`}
         >

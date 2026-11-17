@@ -8,17 +8,17 @@ export default {
     extend: {
       colors: {
         brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50: '#f4f8ff',
+          100: '#e2eeff',
+          500: '#2978ee',
+          600: '#0560e8',
+          700: '#004fc4',
+          800: '#003b99',
+          900: '#002b70',
         },
         knooviq: {
-          primary: '#1e293b',
-          accent: '#2563eb',
+          primary: '#0560e8',
+          accent: '#0560e8',
           secondary: '#0f172a'
         }
       }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, FileText, Info, Loader2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
+import { CompanyLogo } from '../Common/CompanyLogo';
 import { LeaveAllowances } from './LeaveAllowances';
 import { GeofenceCard } from './GeofenceCard';
 import { api } from '../../services/api';
@@ -81,6 +82,6 @@ export function SuperAdminDashboard({ setTab }) {
       </section>
     </div>
     <section className="sa-profile-banner"><div className="sa-profile-symbol"><Info size={24} /></div><div className="sa-profile-content"><State resource={profile}><h2>{complete ? 'Your profile is up to date!' : 'Keep your profile up to date'}</h2><p>{complete ? 'Your essential profile information is complete.' : 'Review your personal details and account information.'}</p></State><button className="sa-primary-button" onClick={() => setTab('profile')}>View Profile Details <ArrowRight size={15} /></button></div><CheckCircle2 className="sa-banner-decoration" size={96} /></section>
-    <p className="sa-page-footer"><ShieldCheck size={13} /> KNOOVIQ Workforce Attendance <span>Signed in as {currentUser?.first_name} {currentUser?.last_name}</span></p>
+    <div className="sa-page-footer"><CompanyLogo variant="compact" /><span className="company-product-name">Workforce Attendance</span><span>Signed in as {currentUser?.first_name} {currentUser?.last_name}</span></div>
   </div>;
 }

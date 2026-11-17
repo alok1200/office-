@@ -138,7 +138,7 @@ export function RequestFormModal({ isOpen, onClose, onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="flex items-center gap-2 px-5 py-2 rounded-xl bg-white border-2 border-blue-600 hover:bg-blue-50 text-black text-xs font-black shadow-xs disabled:opacity-50"
+            className="ui-button-primary"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> : <Send className="w-3.5 h-3.5 text-blue-600" />}
             <span>Submit Request</span>
