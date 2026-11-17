@@ -83,7 +83,7 @@ export function LoginPage() {
             <div>
               <label
                 htmlFor="identifier"
-                className="block text-xs font-black text-black uppercase tracking-wider mb-1.5"
+                className="block text-xs font-black text-black mb-1.5"
               >
                 Email Address or Employee ID <span className="text-blue-600">*</span>
               </label>
@@ -109,7 +109,7 @@ export function LoginPage() {
                   aria-invalid={!!validationErrors.identifier}
                   aria-describedby={validationErrors.identifier ? 'identifier-error' : undefined}
                 />
-                <Mail className="w-4 h-4 text-blue-600 absolute left-3.5 top-3" />
+                <Mail className="w-4 h-4 text-blue-600 absolute left-3.5 top-4" />
               </div>
               {validationErrors.identifier && (
                 <p id="identifier-error" className="text-xs text-rose-600 font-bold mt-1.5 flex items-center gap-1">
@@ -122,7 +122,7 @@ export function LoginPage() {
             <div>
               <label
                 htmlFor="password"
-                className="block text-xs font-black text-black uppercase tracking-wider mb-1.5"
+                className="block text-xs font-black text-black mb-1.5"
               >
                 Password <span className="text-blue-600">*</span>
               </label>
@@ -148,12 +148,12 @@ export function LoginPage() {
                   aria-invalid={!!validationErrors.password}
                   aria-describedby={validationErrors.password ? 'password-error' : undefined}
                 />
-                <Lock className="w-4 h-4 text-blue-600 absolute left-3.5 top-3" />
+                <Lock className="w-4 h-4 text-blue-600 absolute left-3.5 top-4" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-2.5 p-1 text-blue-600 hover:bg-slate-50 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-blue-600"
+                  className="absolute right-3 top-3 p-1 text-blue-600 hover:bg-slate-50 rounded-lg transition-colors focus:outline-none focus:ring-1 focus:ring-blue-600"
                 >
                   {showPassword ? (
                     <EyeOff className="w-4 h-4 text-blue-600" />
