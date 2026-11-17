@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationsContext';
+import { CompanyLogo } from '../Common/CompanyLogo';
 import { RoleSwitcher } from '../Common/RoleSwitcher';
 import { Bell, Menu, LogOut } from 'lucide-react';
 
@@ -23,6 +24,7 @@ export function Header({ onToggleMobileMenu, setTab }) {
     <header className="app-header">
       <div className="header-welcome">
         <button type="button" aria-label="Open navigation menu" onClick={onToggleMobileMenu} className="ui-icon-button md:hidden"><Menu size={20} /></button>
+        <CompanyLogo variant="compact" className="header-company-logo" />
         <div>
           <h1>Welcome back, {currentUser?.first_name || 'User'}</h1>
           <p>{[currentUser?.designation, currentUser?.department_name].filter(Boolean).join(' · ')}</p>

@@ -25,7 +25,6 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'my-requests', label: 'Requests', icon: FileText },
     { id: 'responses', label: 'Responses', icon: MessageSquare },
-    { id: 'admin', label: 'Admin', icon: Building2 },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'profile', label: 'My Profile', icon: User },

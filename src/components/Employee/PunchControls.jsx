@@ -48,7 +48,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
           <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
-            Your location is verified when you press an attendance button. You must be within 15 m of the saved office.
+            Your location is verified when you press an attendance button. You must be within 50 m of the saved office.
           </p>
         </div>
         <div className="flex items-center gap-2">

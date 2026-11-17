@@ -53,7 +53,7 @@ export default function GeofenceMap({ office, sample, onOfficePick, disabled = f
         </LayersControl>
         <FitOfficeView officePoint={officePoint} userPoint={userPoint} accuracy={precise ? sample.accuracy : 0} editable={editable} />
         {officePoint && <>
-          <Circle center={officePoint} radius={15} pathOptions={{ color: '#0560e8', fillColor: '#0560e8', fillOpacity: .1, weight: 2 }}><Tooltip>{editable ? 'Draft' : 'Fixed'} attendance boundary · 15 m</Tooltip></Circle>
+          <Circle center={officePoint} radius={50} pathOptions={{ color: '#0560e8', fillColor: '#0560e8', fillOpacity: .1, weight: 2 }}><Tooltip>{editable ? 'Draft' : 'Fixed'} attendance boundary · 50 m</Tooltip></Circle>
           {editable ? <Marker position={officePoint} icon={officeIcon} draggable={canPick} eventHandlers={{ dragend: event => { if (!canPick) return; const point = event.target.getLatLng(); onOfficePick({ latitude: point.lat, longitude: point.lng }); } }}><Tooltip>Draft office pin · changes apply only after Save office</Tooltip></Marker> : <CircleMarker center={officePoint} radius={7} pathOptions={{ color: 'white', weight: 2, fillColor: '#003b99', fillOpacity: 1 }}><Tooltip>Saved office · {office.name}</Tooltip></CircleMarker>}
         </>}
         {userPoint && <>
@@ -65,6 +65,6 @@ export default function GeofenceMap({ office, sample, onOfficePick, disabled = f
       </MapContainer>
     </div>
     {tileError && <p role="status" className="sa-office-form-help">Map tiles are unavailable. Try the other map layer; GPS and manual coordinate fields still work.</p>}
-    <p className="sa-office-form-help">{editable ? 'Choose Streets or Satellite, then click your office building or drag the blue pin. This changes only the draft. Review the coordinates and press Save office to apply.' : userPoint ? 'Blue: fixed office and 15 m boundary. Orange: your GPS position; the dashed circle shows reported accuracy. This map is read-only.' : 'Only the fixed office pin is shown until a GPS reading meets the configured accuracy limit. This map is read-only.'}</p>
+    <p className="sa-office-form-help">{editable ? 'Choose Streets or Satellite, then click your office building or drag the blue pin. This changes only the draft. Review the coordinates and press Save office to apply.' : userPoint ? 'Blue: fixed office and 50 m boundary. Orange: your GPS position; the dashed circle shows reported accuracy. This map is read-only.' : 'Only the fixed office pin is shown until a GPS reading meets the configured accuracy limit. This map is read-only.'}</p>
   </div>;
 }

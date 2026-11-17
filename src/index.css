@@ -372,3 +372,6 @@
 .sa-map-office-icon span { display: block; width: 20px; height: 20px; border: 3px solid white; border-radius: 50%; background: #003b99; box-shadow: 0 1px 5px #0005; }
 .sa-geographic-map.is-editable .leaflet-container { cursor: crosshair; }
 .sa-office-dialog .sa-geographic-map { height: 300px; }
+
+.header-company-logo { width: 100px; padding-right: 12px; border-right: 1px solid var(--line); }
+@media(max-width:639px) { .header-company-logo { width: 90px; padding-right: 0; border-right: 0; } .header-welcome > div:last-child { display: none; } }

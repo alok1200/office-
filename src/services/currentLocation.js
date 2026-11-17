@@ -1,5 +1,5 @@
 // Read real device coordinates; never substitute the office pin or an IP location.
-export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, timeoutMs = 20000, onProgress, secureContext = globalThis.isSecureContext } = {}) {
+export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, targetAccuracy = 15, timeoutMs = 20000, onProgress, secureContext = globalThis.isSecureContext } = {}) {
   return new Promise((resolve, reject) => {
     const failure = (message, code = 'GPS_UNAVAILABLE') => Object.assign(new Error(message), { code });
     if (secureContext === false) { reject(failure('Location requires HTTPS or localhost. Open the app on a secure connection and retry.', 'GPS_INSECURE_CONTEXT')); return; }
@@ -18,7 +18,11 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
     if (signal?.aborted) { aborted(); return; }
     signal?.addEventListener('abort', aborted, { once: true });
     globalThis.document?.addEventListener('visibilitychange', visibilityChanged);
-    const timedOut = () => finish(best ? failure(`GPS accuracy is ±${Math.round(best.accuracy)} m; ±${maximumAccuracy} m or better is required. Enable precise location, move near a window or outdoors, and retry.`, 'LOW_ACCURACY') : failure('GPS timed out without a fresh position. Enable device Location Services and precise location, then retry near a window or outdoors.', 'GPS_TIMEOUT'));
+    const timedOut = () => {
+      // Try for a precise fix first; a fresh best fix may still satisfy the office's separate accuracy allowance.
+      if (best && Date.now() - best.readAt <= Math.min(timeoutMs + 1000, 30000) && best.accuracy <= maximumAccuracy) { finish(null, best); return; }
+      finish(best ? failure(`GPS accuracy is ±${Math.round(best.accuracy)} m; ±${maximumAccuracy} m or better is required. Enable precise location, move near a window or outdoors, and retry.`, 'LOW_ACCURACY') : failure('GPS timed out without a fresh position. Enable device Location Services and precise location, then retry near a window or outdoors.', 'GPS_TIMEOUT'));
+    };
     timer = setTimeout(timedOut, timeoutMs);
     const success = position => {
       if (settled) return;
@@ -36,7 +40,7 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         best = sample;
         onProgress?.(best);
       }
-      if (accuracy <= maximumAccuracy) finish(null, sample);
+      if (accuracy <= Math.min(targetAccuracy, maximumAccuracy)) finish(null, sample);
       else if (typeof geolocation.watchPosition !== 'function') timedOut();
     };
     const failed = error => {
