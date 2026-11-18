@@ -38,8 +38,8 @@ export function PersonalRequestForm({ initialCategory = 'CL', onClose, onSuccess
   const options = useRequestOptions(Number(start.slice(0, 4)) || Number(todayInIndia().slice(0, 4)));
   const payload = { category, start_date: start, end_date: end, half_day: halfDay };
   const payloadKey = JSON.stringify(payload);
-  const selected = options.data?.categories.find(c => c.id === category);
-  const balance = options.data?.balances.find(b => b.category === category);
+  const selected = options.data?.categories?.find(c => c.id === category);
+  const balance = options.data?.balances?.find(b => b.category === category);
   const close = () => { if (!submitting.current) onClose(); };
 
   useEffect(() => {
@@ -92,10 +92,10 @@ export function PersonalRequestForm({ initialCategory = 'CL', onClose, onSuccess
       <form onSubmit={submit}>
         {error && <p className="sa-request-error" role="alert">{error}</p>}
         {options.error && <div className="sa-request-error" role="alert">{options.error} <button type="button" onClick={options.refresh}>Retry</button></div>}
-        <label htmlFor="sa-request-type">Request type</label><select id="sa-request-type" value={category} onChange={e => setCategory(e.target.value)} disabled={saving || options.loading}>{options.data?.categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>) || <option>{options.loading ? 'Loading types…' : 'Unavailable'}</option>}</select>
+        <label htmlFor="sa-request-type">Request type</label><select id="sa-request-type" value={category} onChange={e => setCategory(e.target.value)} disabled={saving || options.loading}>{options.data?.categories?.map(c => <option key={c.id} value={c.id}>{c.label}</option>) || <option>{options.loading ? 'Loading types…' : 'Unavailable'}</option>}</select>
         <div className="sa-request-dates"><div><label htmlFor="sa-request-from">From</label><input id="sa-request-from" type="date" min="2000-01-01" max="2100-12-31" value={start} onChange={e => { setStart(e.target.value); if (end < e.target.value || halfDay) setEnd(e.target.value); }} required disabled={saving} /></div><div><label htmlFor="sa-request-to">To</label><input id="sa-request-to" type="date" min={start || '2000-01-01'} max="2100-12-31" value={end} onChange={e => setEnd(e.target.value)} required disabled={saving || halfDay} /></div></div>
         <label className="sa-half-day"><input type="checkbox" checked={halfDay} disabled={saving} onChange={e => { setHalfDay(e.target.checked); if (e.target.checked) setEnd(start); }} /> Half day</label>
-        <div className="sa-request-balance"><Info size={17} /><span>{options.loading ? 'Loading balance…' : balance ? <>{balance.label}: <strong>{balance.remaining.toFixed(1)}</strong> of {balance.allowance} day(s) available in {options.data.year}.{balance.pending > 0 ? ` ${balance.pending} day(s) pending.` : ''}</> : 'No annual allowance applies to this request type.'}</span></div>
+        <div className="sa-request-balance"><Info size={17} /><span>{options.loading ? 'Loading balance…' : balance ? <>{balance.label}: <strong>{balance.remaining.toFixed(1)}</strong> of {balance.allowance} day(s) available in {options.data?.year}.{balance.pending > 0 ? ` ${balance.pending} day(s) pending.` : ''}</> : 'No annual allowance applies to this request type.'}</span></div>
         <label htmlFor="sa-request-reason">Reason <span>(min 10 characters)</span></label><textarea id="sa-request-reason" value={reason} onChange={e => setReason(e.target.value)} rows={3} minLength={10} maxLength={2000} placeholder="Explain briefly…" required disabled={saving} />
         <div className="sa-request-preview" role="status"><CalendarClock size={18} />{preview.loading ? 'Calculating working days…' : preview.error ? <span className="sa-request-error">{preview.error}</span> : <span>{displayRequestDate(start)}{start !== end ? ` – ${displayRequestDate(end)}` : ''} · <strong>{preview.data?.days} day(s)</strong></span>}</div>
         {overBalance && <p className="sa-request-error" role="alert">Not enough allowance for the selected dates.</p>}

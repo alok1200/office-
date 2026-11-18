@@ -45,16 +45,18 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'profile', label: 'My Profile', icon: User },
   ];
 
+  // make my-request change hr requests for any miss attedence  
+
   const superAdminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
-    { id: 'my-requests', label: 'Requests', icon: FileText },
+    { id: 'my-requests', label: 'HR-Requests', icon: FileText }, // change that points 
     { id: 'hr-employees', label: 'Team', icon: Users },
     { id: 'admin-approvals', label: 'Approvals', icon: Shield },
     { id: 'hr-attendance', label: 'Reports', icon: Clock },
     { id: 'office-location', label: 'Office Location', icon: MapPin },
-    { id: 'admin', label: 'Admin', icon: Building2 },
+    // { id: 'admin', label: 'Admin', icon: Building2 },  // dont need 
   ];
 
   const navItems = isSuperAdmin
