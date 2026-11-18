@@ -30,11 +30,11 @@ export function HRSummaryCards() {
       <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-black text-xs flex flex-col sm:flex-row items-start sm:items-center gap-3 justify-between shadow-2xs">
         <div className="flex flex-wrap items-center gap-2">
           <Shield className="w-4 h-4 text-blue-600 shrink-0" />
-          <span className="font-bold">HR Admin Portal — Read-Only Mode:</span>
-          <span className="text-slate-600">Company-wide visibility into headcount, punches, and requests. Decision authority reserved for Super Admin.</span>
+          <span className="font-bold">HR Admin Portal — Review &amp; correction tickets:</span>
+          <span className="text-slate-600">View company attendance and raise correction tickets. Approval and attendance changes are reserved for Super Admin.</span>
         </div>
         <span className="hidden sm:inline-block px-2.5 py-0.5 rounded bg-white text-black border border-slate-300 font-black text-[10px]">
-          VIEW ONLY
+          HR REVIEW
         </span>
       </div>
 

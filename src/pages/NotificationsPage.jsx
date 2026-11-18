@@ -3,7 +3,7 @@ import { useNotifications } from '../context/NotificationsContext';
 import { useAuth } from '../context/AuthContext';
 import { Bell, CheckCircle, Clock, Sparkles, MessageSquare, Check, RefreshCw, ArrowRight, Inbox } from 'lucide-react';
 
-const categories = { ATTENDANCE: { icon: Clock, label: 'Attendance' }, REQUEST: { icon: CheckCircle, label: 'Request update' }, HOLIDAY: { icon: Sparkles, label: 'Holiday' }, ANNOUNCEMENT: { icon: MessageSquare, label: 'Announcement' } };
+const categories = { CORRECTION: { icon: MessageSquare, label: 'Attendance correction' }, ATTENDANCE: { icon: Clock, label: 'Attendance' }, REQUEST: { icon: CheckCircle, label: 'Request update' }, HOLIDAY: { icon: Sparkles, label: 'Holiday' }, ANNOUNCEMENT: { icon: MessageSquare, label: 'Announcement' } };
 const timestamp = value => {
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? 'Date unavailable' : parsed.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
@@ -30,7 +30,7 @@ export function NotificationsPage({ setTab }) {
         const { icon: Icon, label } = categories[item.category] || categories.ANNOUNCEMENT;
         return <article key={item.id} className={`notification-item ${item.is_read ? '' : 'is-unread'}`}>
           <span className="inbox-category-icon"><Icon size={21} /></span>
-          <div className="notification-content"><div className="notification-meta"><span>{label}</span><time dateTime={item.created_at}>{timestamp(item.created_at)}</time>{!item.is_read && <strong className="notification-unread-label">Unread</strong>}</div><h2>{item.title}</h2><p>{item.message}</p>{item.category === 'REQUEST' && setTab && <button type="button" className="sa-text-button mt-2" onClick={() => setTab(!isHR && !isSuperAdmin ? 'responses' : 'my-requests')}>{!isHR && !isSuperAdmin ? 'View my responses' : 'View my requests'}<ArrowRight size={15} /></button>}</div>
+          <div className="notification-content"><div className="notification-meta"><span>{label}</span><time dateTime={item.created_at}>{timestamp(item.created_at)}</time>{!item.is_read && <strong className="notification-unread-label">Unread</strong>}</div><h2>{item.title}</h2><p>{item.message}</p>{['REQUEST','CORRECTION'].includes(item.category) && setTab && <button type="button" className="sa-text-button mt-2" onClick={() => setTab(item.category === 'CORRECTION' ? 'tickets' : !isHR && !isSuperAdmin ? 'responses' : 'my-requests')}>{item.category === 'CORRECTION' ? 'View attendance tickets' : !isHR && !isSuperAdmin ? 'View my responses' : 'View my requests'}<ArrowRight size={15} /></button>}</div>
           {!item.is_read ? <button type="button" className="notification-read-button" onClick={() => handleMarkAsRead(item.id)} disabled={marking !== null} aria-label={`Mark as read: ${item.title}`}><Check size={15} />{marking === item.id ? 'Saving…' : 'Mark read'}</button> : <span className="notification-read-status"><Check size={14} />Read</span>}
         </article>;
       })}

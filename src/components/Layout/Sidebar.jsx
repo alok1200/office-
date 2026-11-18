@@ -16,6 +16,7 @@ import {
   Building2,
   MessageSquare,
   MapPin,
+  Ticket,
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, setTab }) {
@@ -24,7 +25,7 @@ export function Sidebar({ currentTab, setTab }) {
   const employeeNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'my-requests', label: 'Requests', icon: FileText },
+    { id: 'tickets', label: 'Tickets', icon: Ticket },
     { id: 'responses', label: 'Responses', icon: MessageSquare },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -39,24 +40,21 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'hr-company-requests', label: 'Employee Requests', icon: FileText, badge: 'Read‑only' },
     { section: 'My Workday' },
     { id: 'calendar', label: 'My Calendar', icon: Calendar },
-    { id: 'my-requests', label: 'My Requests', icon: Send, badge: 'Self' },
+    { id: 'tickets', label: 'Tickets', icon: Ticket, badge: 'HR' },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'profile', label: 'My Profile', icon: User },
   ];
 
-  // make my-request change hr requests for any miss attedence  
-
   const superAdminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
-    { id: 'my-requests', label: 'HR-Requests', icon: FileText }, // change that points 
+    { id: 'tickets', label: 'HR-Requests', icon: Ticket },
     { id: 'hr-employees', label: 'Team', icon: Users },
     { id: 'admin-approvals', label: 'Approvals', icon: Shield },
     { id: 'hr-attendance', label: 'Reports', icon: Clock },
     { id: 'office-location', label: 'Office Location', icon: MapPin },
-    // { id: 'admin', label: 'Admin', icon: Building2 },  // dont need 
   ];
 
   const navItems = isSuperAdmin
@@ -71,7 +69,7 @@ export function Sidebar({ currentTab, setTab }) {
       <div className="sidebar-portal">
         <span>Your workspace</span>
         <strong>{isSuperAdmin ? 'Super Admin' : isHR ? 'HR Admin Portal' : 'Employee Portal'}</strong>
-        {isHR && <p>Company visibility · Read only</p>}
+        {isHR && <p>Company visibility · Correction tickets</p>}
       </div>
       <nav aria-label="Main navigation" className="sidebar-navigation">
         {navItems.map((item, index) => {

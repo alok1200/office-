@@ -59,6 +59,24 @@ export const api = {
     const res = await fetch(`${API_BASE}/super-admin/approvals`, { headers: getHeaders(userId) });
     return res.json();
   },
+  getSuperAdminHRRequests: async (userId, filters = {}) => {
+    const params = new URLSearchParams(filters).toString();
+    const res = await fetch(`${API_BASE}/super-admin/hr-requests${params ? `?${params}` : ''}`, { headers: getHeaders(userId) });
+    return res.json();
+  },
+  getAllSuperAdminRequests: async (userId, filters = {}) => {
+    const params = new URLSearchParams(filters).toString();
+    const res = await fetch(`${API_BASE}/super-admin/requests/all${params ? `?${params}` : ''}`, { headers: getHeaders(userId) });
+    return res.json();
+  },
+  editAttendanceBySuperAdmin: async (userId, payload) => {
+    const res = await fetch(`${API_BASE}/super-admin/attendance/edit`, {
+      method: 'POST',
+      headers: getHeaders(userId),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
   reviewSuperAdminRequest: async (userId, id, payload) => {
     const res = await fetch(`${API_BASE}/super-admin/requests/${id}/decision`, { method: 'PATCH', headers: getHeaders(userId), body: JSON.stringify(payload) });
     return res.json();
@@ -143,6 +161,10 @@ export const api = {
     return res.json();
   },
 
+  getAttendanceCorrections: async (signal) => (await fetch(`${API_BASE}/requests/attendance-corrections`, {headers:getHeaders(),signal})).json(),
+  raiseAttendanceCorrection: async (payload) => (await fetch(`${API_BASE}/requests/attendance-corrections`, {method:'POST',headers:getHeaders(),body:JSON.stringify(payload)})).json(),
+  getAttendanceCorrectionAudit: async (id) => (await fetch(`${API_BASE}/requests/attendance-corrections/${id}/audit`, {headers:getHeaders()})).json(),
+
   // Requests
   getMyRequests: async (userId, signal) => {
     const res = await fetch(`${API_BASE}/requests/my`, {
@@ -155,6 +177,13 @@ export const api = {
       method: 'POST',
       headers: getHeaders(userId),
       body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+  cancelMyRequest: async (userId, id) => {
+    const res = await fetch(`${API_BASE}/requests/${id}/cancel`, {
+      method: 'PATCH',
+      headers: getHeaders(userId)
     });
     return res.json();
   },

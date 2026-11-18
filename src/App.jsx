@@ -6,6 +6,7 @@ import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { HRDashboardPage } from './pages/HRDashboardPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { AttendanceTicketsPage } from './pages/AttendanceTicketsPage';
 import { ResponsesPage } from './pages/ResponsesPage';
 import { MyRequestsPage } from './pages/MyRequestsPage';
 import { HREmployeesPage } from './pages/HREmployeesPage';
@@ -87,12 +88,14 @@ function AppContent() {
         return <HRDashboardPage setTab={setCurrentTab} />;
       case 'calendar':
         return <CalendarPage />;
+      case 'tickets':
+        return <AttendanceTicketsPage />;
       case 'my-requests':
         return isSuperAdmin ? <SuperAdminRequestsPage /> : <MyRequestsPage />;
       case 'hr-employees':
         return <HREmployeesPage />;
       case 'hr-attendance':
-        return isSuperAdmin ? <SuperAdminReportsPage /> : <HRAttendancePage />;
+        return isSuperAdmin ? <SuperAdminReportsPage /> : <HRAttendancePage setTab={setCurrentTab} />;
       case 'hr-company-requests':
         return <HRCompanyRequestsPage />;
       case 'holidays':
