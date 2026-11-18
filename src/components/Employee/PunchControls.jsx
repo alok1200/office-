@@ -6,7 +6,16 @@ import { StatusBadge } from '../Common/StatusBadge';
 import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
 export function PunchControls({ todayData, onRefresh, loading = false }) {
-  const { currentUserId, currentUser } = useAuth();
+  const { currentUserId, currentUser, isSuperAdmin } = useAuth();
+  if (isSuperAdmin) {
+    return (
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
+        <p className="text-sm text-slate-600">
+          SUPER_ADMIN accounts do not track personal check‑in, check‑out, or breaks.
+        </p>
+      </div>
+    );
+  }
   const [loadingAction, setLoadingAction] = useState(null);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);

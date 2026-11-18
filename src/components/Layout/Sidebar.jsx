@@ -15,6 +15,7 @@ import {
   Shield,
   Building2,
   MessageSquare,
+  MapPin,
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, setTab }) {
@@ -47,10 +48,12 @@ export function Sidebar({ currentTab, setTab }) {
   const superAdminNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
+    { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'my-requests', label: 'Requests', icon: FileText },
     { id: 'hr-employees', label: 'Team', icon: Users },
     { id: 'admin-approvals', label: 'Approvals', icon: Shield },
     { id: 'hr-attendance', label: 'Reports', icon: Clock },
+    { id: 'office-location', label: 'Office Location', icon: MapPin },
     { id: 'admin', label: 'Admin', icon: Building2 },
   ];
 

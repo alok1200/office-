@@ -71,7 +71,7 @@ export function useOfficeGeofence(enabled) {
   const getPunchLocation = async () => {
     // Always obtain a new reading and saved office before a consequential punch.
     const actor = currentUserId;
-    if (!enabled || !mounted.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled. Keep your signed-in attendance page open and retry.');
+    if (!enabled || !mounted.current || document.visibilityState !== 'visible') throw new Error('Location check cancelled. Keep this page open and try again.');
     locationRequest.current?.abort();
     const controller = new AbortController(); locationRequest.current = controller;
     const office = await loadOffice();

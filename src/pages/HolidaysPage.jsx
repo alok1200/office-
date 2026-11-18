@@ -1,35 +1,70 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { CalendarDays, Sparkles, Send } from 'lucide-react';
-import { RequestFormModal } from '../components/Employee/RequestFormModal';
+import { CalendarDays, Sparkles, Plus, Edit2, Trash2 } from 'lucide-react';
+import { HolidayFormModal } from '../components/HR/HolidayFormModal';
 
 export function HolidaysPage() {
-  const { currentUserId } = useAuth();
+  const { currentUserId, isSuperAdmin } = useAuth();
   const [holidays, setHolidays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedHoliday, setSelectedHoliday] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    async function loadHolidays() {
-      try {
-        const res = await api.getHolidays(currentUserId);
-        if (res.success && res.data) {
-          setHolidays(res.data);
-        }
-      } catch (err) {
-        console.error('Failed to load holidays:', err);
-      } finally {
-        setLoading(false);
+  const loadHolidays = useCallback(async () => {
+    try {
+      const res = await api.getHolidays(currentUserId);
+      if (res.success && res.data) {
+        setHolidays(res.data);
       }
+    } catch (err) {
+      console.error('Failed to load holidays:', err);
+    } finally {
+      setLoading(false);
     }
-    loadHolidays();
   }, [currentUserId]);
 
+  useEffect(() => {
+    loadHolidays();
+  }, [loadHolidays]);
+
+  const handleOpenAdd = () => {
+    setSelectedHoliday(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (holiday) => {
+    setSelectedHoliday(holiday);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to remove the holiday "${name}"?`)) {
+      return;
+    }
+    setDeletingId(id);
+    try {
+      const res = await api.deleteHoliday(currentUserId, id);
+      if (res.success) {
+        setSuccessMsg(`Holiday "${name}" removed successfully.`);
+        setTimeout(() => setSuccessMsg(null), 5000);
+        await loadHolidays();
+      } else {
+        alert(res.error || 'Failed to remove holiday');
+      }
+    } catch (err) {
+      alert(err.message || 'Error deleting holiday');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const handleSuccess = (msg) => {
-    setSuccessMsg(msg || 'Holiday request submitted successfully.');
+    setSuccessMsg(msg || 'Holiday updated successfully.');
     setTimeout(() => setSuccessMsg(null), 5000);
+    loadHolidays();
   };
 
   return (
@@ -45,13 +80,15 @@ export function HolidaysPage() {
           </p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-blue-600 hover:bg-blue-50 text-black text-xs font-black shadow-xs active:scale-[0.98] transition-all"
-        >
-          <Send className="w-4 h-4 text-blue-600" />
-          <span>Submit Holiday Request</span>
-        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-blue-600 hover:bg-blue-50 text-black text-xs font-black shadow-xs active:scale-[0.98] transition-all"
+          >
+            <Plus className="w-4 h-4 text-blue-600" />
+            <span>Add Holiday</span>
+          </button>
+        )}
       </div>
 
       {successMsg && (
@@ -66,6 +103,10 @@ export function HolidaysPage() {
           <div className="col-span-4 text-center py-12 text-slate-500 font-medium text-xs">
             Loading holidays...
           </div>
+        ) : holidays.length === 0 ? (
+          <div className="col-span-4 text-center py-12 text-slate-500 font-medium text-xs">
+            No holidays declared yet.
+          </div>
         ) : (
           holidays.map((h) => {
             const dateObj = new Date(h.holiday_date);
@@ -76,14 +117,37 @@ export function HolidaysPage() {
             return (
               <div
                 key={h.id}
-                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between"
+                className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex flex-col justify-between relative group"
               >
                 <div>
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-white text-black border border-slate-300 shadow-2xs">
                       {h.holiday_type || 'OFFICIAL'}
                     </span>
-                    <Sparkles className="w-4 h-4 text-blue-600" />
+                    <div className="flex items-center gap-1.5">
+                      {isSuperAdmin && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(h)}
+                            title="Edit Holiday"
+                            className="p-1 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(h.id, h.name)}
+                            disabled={deletingId === h.id}
+                            title="Remove Holiday"
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                    </div>
                   </div>
 
                   <div className="mt-4 flex items-baseline gap-2">
@@ -105,11 +169,17 @@ export function HolidaysPage() {
         )}
       </div>
 
-      <RequestFormModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleSuccess}
-      />
+      {isSuperAdmin && (
+        <HolidayFormModal
+          isOpen={isModalOpen}
+          initialData={selectedHoliday}
+          onClose={() => {
+            setIsModalOpen(false);
+            setSelectedHoliday(null);
+          }}
+          onSuccess={handleSuccess}
+        />
+      )}
     </div>
   );
 }

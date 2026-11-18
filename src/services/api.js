@@ -194,6 +194,29 @@ export const api = {
     });
     return res.json();
   },
+  createHoliday: async (userId, payload) => {
+    const res = await fetch(`${API_BASE}/holidays`, {
+      method: 'POST',
+      headers: getHeaders(userId),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+  updateHoliday: async (userId, id, payload) => {
+    const res = await fetch(`${API_BASE}/holidays/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(userId),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+  deleteHoliday: async (userId, id) => {
+    const res = await fetch(`${API_BASE}/holidays/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(userId)
+    });
+    return res.json();
+  },
   getNotifications: async (userId, signal) => {
     const res = await fetch(`${API_BASE}/notifications`, {
       signal, headers: getHeaders(userId)
