@@ -11,10 +11,13 @@ export function useOfficeGeofence(enabled) {
   const [error, setError] = useState('');
   const [reading, setReading] = useState(false);
   const [tracking, setTracking] = useState(false);
+  const [liveAccuracy, setLiveAccuracy] = useState(null);
   const [clock, setClock] = useState(Date.now());
   const [visible, setVisible] = useState(document.visibilityState === 'visible');
   const locationRequest = useRef(null);
   const sequence = useRef(0), mounted = useRef(true), activeUser = useRef(currentUserId);
+  const sampleRef = useRef(null), trackingRef = useRef(false);
+  sampleRef.current = sample; trackingRef.current = tracking;
   activeUser.current = currentUserId;
   const loadOffice = useCallback(async () => {
     const user = currentUserId;
@@ -55,7 +58,12 @@ export function useOfficeGeofence(enabled) {
       const office = await loadOffice();
       if (!mounted.current || ticket !== sequence.current) return;
       if (!office) throw new Error('No saved office is available. Contact your administrator.');
-      const location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal });
+      setLiveAccuracy(null);
+    let location;
+    try {
+      // 12 s is enough for a phone to lock GPS; a device that cannot reach the limit by then needs a better signal, not more waiting.
+      location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal, timeoutMs: 12000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
+    } finally { if (mounted.current) setLiveAccuracy(null); }
       if (mounted.current && ticket === sequence.current) { setSample(location); setTracking(true); }
     } catch (error) { if (mounted.current && ticket === sequence.current) { setSample(null); setError(error.message); } }
     finally { if (mounted.current) setReading(false); }
@@ -77,12 +85,23 @@ export function useOfficeGeofence(enabled) {
     const office = await loadOffice();
     if (!mounted.current || actor !== activeUser.current || controller.signal.aborted) throw new Error('Attendance cancelled because the page or account changed.');
     if (!office) throw new Error('No saved office is available. Contact your administrator.');
-    const location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50) });
+    // Fast path: the page keeps a live GPS watch warm, so reuse a reading taken within the last 8 seconds.
+    const warm = sampleRef.current;
+    if (warm && trackingRef.current && Date.now() - warm.readAt <= 8000 && warm.accuracy <= Number(office.max_accuracy_m ?? 50)) {
+      const quick = evaluateLocation(office, warm);
+      if (quick.eligible) return { latitude: warm.latitude, longitude: warm.longitude, accuracy: warm.accuracy };
+    }
+    setLiveAccuracy(null);
+    let location;
+    try {
+      // 12 s is enough for a phone to lock GPS; a device that cannot reach the limit by then needs a better signal, not more waiting.
+      location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal, timeoutMs: 12000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
+    } finally { if (mounted.current) setLiveAccuracy(null); }
     if (!mounted.current || actor !== activeUser.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled because the signed-in account changed.');
     const evaluation = evaluateLocation(office, location);
     if (mounted.current) { setSample(location); }
     if (!evaluation.eligible) throw new Error(evaluation.message);
     return { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy };
   };
-  return { ...officeState, sample, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; locationRequest.current?.abort(); setTracking(false); setSample(null); setError(''); } };
+  return { ...officeState, sample, liveAccuracy, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; locationRequest.current?.abort(); setTracking(false); setSample(null); setError(''); } };
 }

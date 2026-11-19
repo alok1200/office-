@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
@@ -23,6 +23,12 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
   const currentState = todayData?.current_state || 'NOT_CHECKED_IN';
   const canRecord = !loading && todayData?.can_record_attendance === true;
   const geofence = useOfficeGeofence(currentUser?.can_record_attendance === true);
+
+  // Warm up GPS as soon as the controls are ready so Check In / Check Out respond instantly.
+  const warmedUp = useRef(false);
+  useEffect(() => {
+    if (canRecord && !warmedUp.current && !geofence.loading) { warmedUp.current = true; geofence.refresh(); }
+  }, [canRecord, geofence.loading]);
 
   const handlePunch = async (action) => {
     setLoadingAction(action);
@@ -67,7 +73,19 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       </div>
 
       {/* GPS is checked on attendance actions; the full GPS panel is Super Admin only. */}
-      {loadingAction && <p role="status" className="mt-4 text-sm text-slate-600">Verifying your location and recording attendance…</p>}
+      {/* Live GPS status so employees know before tapping whether their signal is good enough. */}
+      {canRecord && (() => {
+        const limit = Number(geofence.office?.max_accuracy_m ?? 75);
+        const accuracy = geofence.liveAccuracy ?? (geofence.sample ? Math.round(geofence.sample.accuracy) : null);
+        const good = accuracy !== null && accuracy <= limit;
+        return <p role="status" className={`mt-4 text-xs font-semibold ${good ? 'text-emerald-700' : 'text-slate-600'}`}>
+          {accuracy === null
+            ? (geofence.reading || loadingAction ? 'Getting your GPS signal…' : 'GPS signal not ready yet — it will start when you tap an attendance button.')
+            : good ? `GPS ready (±${accuracy} m) — attendance will be recorded instantly.`
+            : `GPS signal is weak (±${accuracy} m, need ±${limit} m). Still improving… If this stays high, you are likely on a laptop/desktop without GPS — use your phone, turn on Precise Location, or step near a window or outdoors.`}
+        </p>;
+      })()}
+      {loadingAction && <p role="status" className="mt-2 text-sm text-slate-600">Verifying your location and recording attendance…</p>}
 
       {/* Messages */}
       {message && (

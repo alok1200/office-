@@ -1,6 +1,6 @@
 export function evaluateLocation(office, sample) {
   if (!office) return { eligible: false, message: 'Your office has not been configured.' };
-  office = { ...office, radius_m: Number(office.radius_m) > 0 ? 50 : office.radius_m, max_accuracy_m: Math.min(Number(office.max_accuracy_m ?? 50), 50) };
+  office = { ...office, radius_m: Number(office.radius_m) > 0 ? 50 : office.radius_m, max_accuracy_m: Math.min(Number(office.max_accuracy_m ?? 75), 75) };
   if ([office.latitude, office.longitude, office.radius_m, office.max_accuracy_m ?? 50].some(value => value === null || value === '' || !Number.isFinite(Number(value))) || Math.abs(Number(office.latitude)) > 90 || Math.abs(Number(office.longitude)) > 180 || Number(office.radius_m) <= 0 || Number(office.max_accuracy_m ?? 50) <= 0) return { eligible: false, message: 'Office GPS settings are invalid. Contact your administrator.' };
   if (!sample || !Number.isFinite(sample.latitude) || !Number.isFinite(sample.longitude) || Math.abs(sample.latitude) > 90 || Math.abs(sample.longitude) > 180 || !Number.isFinite(sample.accuracy) || sample.accuracy < 0) return { eligible: false, message: 'Check your current location to enable attendance actions.' };
   const radians = value => value * Math.PI / 180;

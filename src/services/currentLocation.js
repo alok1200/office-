@@ -1,13 +1,13 @@
 // Read real device coordinates; never substitute the office pin or an IP location.
-export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, targetAccuracy = 15, timeoutMs = 20000, onProgress, secureContext = globalThis.isSecureContext } = {}) {
+export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, targetAccuracy = 15, timeoutMs = 20000, graceMs = 1200, onProgress, secureContext = globalThis.isSecureContext } = {}) {
   return new Promise((resolve, reject) => {
     const failure = (message, code = 'GPS_UNAVAILABLE') => Object.assign(new Error(message), { code });
     if (secureContext === false) { reject(failure('Location requires HTTPS or localhost. Open the app on a secure connection and retry.', 'GPS_INSECURE_CONTEXT')); return; }
     if (!geolocation) { reject(failure('GPS is unavailable in this browser. Enable device Location Services and use a supported browser.')); return; }
-    let settled = false, watchId, timer, best;
+    let settled = false, watchId, timer, graceTimer, best;
     const finish = (error, sample) => {
       if (settled) return;
-      settled = true; clearTimeout(timer);
+      settled = true; clearTimeout(timer); clearTimeout(graceTimer);
       if (watchId !== undefined) geolocation.clearWatch?.(watchId);
       signal?.removeEventListener('abort', aborted);
       globalThis.document?.removeEventListener('visibilitychange', visibilityChanged);
@@ -41,6 +41,10 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         onProgress?.(best);
       }
       if (accuracy <= Math.min(targetAccuracy, maximumAccuracy)) finish(null, sample);
+      else if (best.accuracy <= maximumAccuracy && !graceTimer) {
+        // A fix that already meets the office's accuracy rule is good enough: wait only a moment for a better one, then use the best.
+        graceTimer = setTimeout(() => finish(null, best), graceMs);
+      }
       else if (typeof geolocation.watchPosition !== 'function') timedOut();
     };
     const failed = error => {

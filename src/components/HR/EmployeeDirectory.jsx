@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
 import { StatusBadge } from '../Common/StatusBadge';
-import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop } from 'lucide-react';
+import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop, KeyRound, Trash2 } from 'lucide-react';
 import { AddEmployeeModal, AssetFields, blankAsset, assetTypeLabel } from './AddEmployeeModal';
 
 const day = value => value ? String(value).slice(0, 10) : '—';
@@ -23,6 +23,68 @@ export function EmployeeDirectory({ openAdd = false }) {
   const [newAsset, setNewAsset] = useState(null);
   const [assetBusy, setAssetBusy] = useState(false);
   const [assetError, setAssetError] = useState('');
+  const [resetEmp, setResetEmp] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [deleteEmp, setDeleteEmp] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  const handleDeleteEmployee = async () => {
+    if (deleteBusy || !deleteEmp) return;
+    setDeleteBusy(true);
+    setDeleteError('');
+    try {
+      const res = await api.deleteEmployee(deleteEmp.id);
+      if (!res.success) throw new Error(res.error || 'Could not delete employee.');
+      if (inspectedEmp?.id === deleteEmp.id) setInspectedEmp(null);
+      setDeleteEmp(null);
+      setNotice(res.message || `${deleteEmp.first_name} ${deleteEmp.last_name} has been removed.`);
+      fetchEmployees();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleteBusy(false);
+    }
+  };
+
+  const openResetPassword = (emp) => {
+    setResetEmp(emp);
+    setNewPassword('');
+    setConfirmPassword('');
+    setShowPassword(false);
+    setResetError('');
+  };
+
+  const handleResetPassword = async (event) => {
+    event.preventDefault();
+    if (resetBusy || !resetEmp) return;
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setResetError('New password must be 8–128 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    setResetBusy(true);
+    setResetError('');
+    try {
+      const res = await api.resetEmployeePassword(resetEmp.id, newPassword);
+      if (!res.success) throw new Error(res.error || 'Could not reset password.');
+      setResetEmp(null);
+      setNewPassword('');
+      setConfirmPassword('');
+      setNotice(res.message || `Password updated for ${resetEmp.first_name} ${resetEmp.last_name}.`);
+    } catch (err) {
+      setResetError(err.message);
+    } finally {
+      setResetBusy(false);
+    }
+  };
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -195,18 +257,42 @@ export function EmployeeDirectory({ openAdd = false }) {
                 </div>
               </div>
 
-              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-black font-bold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600" />
-                  Active Employee
-                </span>
-                <button
-                  onClick={() => handleInspect(emp)}
-                  className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs"
-                >
-                  <Eye className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Inspect History</span>
-                </button>
+              <div className="mt-4 pt-3 border-t border-slate-100 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-black font-bold flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-blue-600" />
+                    Active Employee
+                  </span>
+                  <button
+                    onClick={() => handleInspect(emp)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs shrink-0"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Inspect History</span>
+                  </button>
+                </div>
+                {isHR && emp.role === 'EMPLOYEE' && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => openResetPassword(emp)}
+                      title="Reset forgotten password"
+                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                    >
+                      <KeyRound className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>Password</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDeleteError(''); setDeleteEmp(emp); }}
+                      title="Delete employee account"
+                      className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Delete</span>
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ))
@@ -344,6 +430,124 @@ export function EmployeeDirectory({ openAdd = false }) {
         </Modal>
       )}
       {isHR && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
+
+      {isHR && resetEmp && (
+        <Modal
+          isOpen={true}
+          onClose={() => { if (!resetBusy) setResetEmp(null); }}
+          title={`Reset Password: ${resetEmp.first_name} ${resetEmp.last_name}`}
+          maxWidth="max-w-md"
+        >
+          <form onSubmit={handleResetPassword} className="space-y-4 bg-white text-black">
+            <p className="text-xs text-slate-600">
+              Set a new password for <strong className="text-black">{resetEmp.first_name} {resetEmp.last_name}</strong> ({resetEmp.employee_id} · {resetEmp.email}). Any existing sessions for this employee will be signed out.
+            </p>
+            {resetError && (
+              <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-semibold text-rose-700">{resetError}</span>
+              </div>
+            )}
+            <div>
+              <label className="block text-xs font-black text-black uppercase tracking-wider mb-1.5">
+                New Password
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={8}
+                maxLength={128}
+                autoComplete="new-password"
+                value={newPassword}
+                disabled={resetBusy}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white text-black shadow-2xs"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-black text-black uppercase tracking-wider mb-1.5">
+                Confirm New Password
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={8}
+                maxLength={128}
+                autoComplete="new-password"
+                value={confirmPassword}
+                disabled={resetBusy}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Re-enter new password"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white text-black shadow-2xs"
+              />
+            </div>
+            <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                disabled={resetBusy}
+                onChange={(e) => setShowPassword(e.target.checked)}
+              />
+              Show password
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={resetBusy}
+                onClick={() => setResetEmp(null)}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-black text-xs font-bold shadow-2xs"
+              >
+                Cancel
+              </button>
+              <button type="submit" disabled={resetBusy} className="ui-button-primary">
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>{resetBusy ? 'Updating…' : 'Update Password'}</span>
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {isHR && deleteEmp && (
+        <Modal
+          isOpen={true}
+          onClose={() => { if (!deleteBusy) setDeleteEmp(null); }}
+          title={`Delete Employee: ${deleteEmp.first_name} ${deleteEmp.last_name}`}
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4 bg-white text-black">
+            <p className="text-xs text-slate-600">
+              Remove <strong className="text-black">{deleteEmp.first_name} {deleteEmp.last_name}</strong> ({deleteEmp.employee_id} · {deleteEmp.email}) from the company? They will be signed out immediately and will no longer be able to log in. Historical attendance and audit records are preserved.
+            </p>
+            {deleteError && (
+              <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span className="font-semibold text-rose-700">{deleteError}</span>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                disabled={deleteBusy}
+                onClick={() => setDeleteEmp(null)}
+                className="px-4 py-2 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-black text-xs font-bold shadow-2xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteBusy}
+                onClick={handleDeleteEmployee}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs disabled:opacity-60"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{deleteBusy ? 'Deleting…' : 'Delete Employee'}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

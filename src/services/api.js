@@ -219,6 +219,8 @@ export const api = {
   getEmployeeDetails: async (id) => (await fetch(`${API_BASE}/employees/${id}/details`, { headers: getHeaders() })).json(),
   addEmployeeAsset: async (id, payload) => (await fetch(`${API_BASE}/employees/${id}/assets`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) })).json(),
   returnEmployeeAsset: async (assetId, returned_date) => (await fetch(`${API_BASE}/employees/assets/${assetId}/return`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ returned_date }) })).json(),
+  resetEmployeePassword: async (id, password) => (await fetch(`${API_BASE}/employees/${id}/password`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ password }) })).json(),
+  deleteEmployee: async (id) => (await fetch(`${API_BASE}/employees/${id}`, { method: 'DELETE', headers: getHeaders() })).json(),
   getMyAssets: async () => (await fetch(`${API_BASE}/employees/me/assets`, { headers: getHeaders() })).json(),
 
   // Holidays & Notifications
