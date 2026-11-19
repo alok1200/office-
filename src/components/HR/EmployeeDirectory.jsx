@@ -3,10 +3,13 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
 import { StatusBadge } from '../Common/StatusBadge';
-import { Search, Mail, Calendar, Eye, AlertCircle, Building } from 'lucide-react';
+import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop } from 'lucide-react';
+import { AddEmployeeModal, AssetFields, blankAsset, assetTypeLabel } from './AddEmployeeModal';
 
-export function EmployeeDirectory() {
-  const { currentUserId } = useAuth();
+const day = value => value ? String(value).slice(0, 10) : '—';
+
+export function EmployeeDirectory({ openAdd = false }) {
+  const { currentUserId, isHR } = useAuth();
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDept, setSelectedDept] = useState('ALL');
@@ -14,6 +17,12 @@ export function EmployeeDirectory() {
   const [inspectedEmp, setInspectedEmp] = useState(null);
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [adding, setAdding] = useState(openAdd);
+  const [notice, setNotice] = useState('');
+  const [assets, setAssets] = useState({ loading: false, rows: [], error: '', extra: [] });
+  const [newAsset, setNewAsset] = useState(null);
+  const [assetBusy, setAssetBusy] = useState(false);
+  const [assetError, setAssetError] = useState('');
 
   const fetchEmployees = async () => {
     setLoading(true);
@@ -36,8 +45,20 @@ export function EmployeeDirectory() {
     fetchEmployees();
   }, [currentUserId, selectedDept]);
 
+  const loadAssets = async id => {
+    setAssets(old => ({ ...old, loading: true, error: '' }));
+    try {
+      const res = await api.getEmployeeDetails(id);
+      if (!res.success) throw new Error(res.error || 'Could not load assets.');
+      setAssets({ loading: false, rows: res.data.assets || [], error: '', extra: res.data.custom_fields || [] });
+    } catch (err) { setAssets({ loading: false, rows: [], error: err.message, extra: [] }); }
+  };
+
   const handleInspect = async (emp) => {
     setInspectedEmp(emp);
+    setAttendanceHistory([]);
+    setNewAsset(null); setAssetError('');
+    if (isHR) loadAssets(emp.id);
     setLoadingHistory(true);
     try {
       const res = await api.getEmployeeAttendanceHistory(currentUserId, emp.id, 2026, 11);
@@ -51,6 +72,29 @@ export function EmployeeDirectory() {
     }
   };
 
+  const issueAsset = async event => {
+    event.preventDefault();
+    if (assetBusy) return;
+    setAssetBusy(true); setAssetError('');
+    try {
+      const res = await api.addEmployeeAsset(inspectedEmp.id, newAsset);
+      if (!res.success) throw new Error(res.error || 'Could not issue the asset.');
+      setNewAsset(null); await loadAssets(inspectedEmp.id);
+    } catch (err) { setAssetError(err.message); }
+    finally { setAssetBusy(false); }
+  };
+
+  const returnAsset = async asset => {
+    if (assetBusy || !window.confirm(`Mark "${asset.asset_name}" as returned?`)) return;
+    setAssetBusy(true); setAssetError('');
+    try {
+      const res = await api.returnEmployeeAsset(asset.id);
+      if (!res.success) throw new Error(res.error || 'Could not update the asset.');
+      await loadAssets(inspectedEmp.id);
+    } catch (err) { setAssetError(err.message); }
+    finally { setAssetBusy(false); }
+  };
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
       {/* Header & Controls */}
@@ -58,11 +102,14 @@ export function EmployeeDirectory() {
         <div>
           <h2 className="text-lg font-black text-black">Company Employee Directory</h2>
           <p className="text-xs text-slate-600 mt-0.5">
-            Read-only company personnel list, contact info, and attendance records
+            Company personnel list, contact info, attendance records and issued company assets
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {isHR && <button type="button" className="ui-button-primary" onClick={() => { setNotice(''); setAdding(true); }}>
+            <UserPlus className="w-4 h-4" /><span>Add Employee</span>
+          </button>}
           {/* Department Filter */}
           <select
             value={selectedDept}
@@ -93,6 +140,7 @@ export function EmployeeDirectory() {
       </div>
 
       {/* Directory Grid */}
+      {notice && <p role="status" className="p-3 rounded-xl border border-blue-200 text-xs font-bold text-black">{notice}</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
           <div className="col-span-3 text-center py-12 text-slate-500 font-medium text-xs">
@@ -176,7 +224,7 @@ export function EmployeeDirectory() {
           <div className="space-y-4 bg-white text-black">
             <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs text-black flex items-center gap-2 shadow-2xs">
               <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
-              <span>HR Admin View-Only: Editing profile details or altering permissions is reserved for Super Admin.</span>
+              <span>Employee records are read-only after creation. You can onboard new employees and manage their company assets.</span>
             </div>
 
             {/* Profile Summary */}
@@ -251,6 +299,39 @@ export function EmployeeDirectory() {
               )}
             </div>
 
+            {isHR && !!assets.extra?.length && <div>
+              <h4 className="text-xs font-black text-black uppercase tracking-wider mb-2">Other Details</h4>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">{assets.extra.map((field, i) => <div key={i} className="p-3 rounded-xl border border-slate-200 text-xs"><dt className="text-slate-500 font-bold">{field.label}</dt><dd className="font-black text-black mt-0.5 break-words">{field.value}</dd></div>)}</dl>
+            </div>}
+
+            {isHR && <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5"><Laptop className="w-4 h-4 text-blue-600" />Company Assets</h4>
+                {!newAsset && <button type="button" className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold flex items-center gap-1 hover:bg-blue-50" onClick={() => { setAssetError(''); setNewAsset(blankAsset()); }}><Plus className="w-3.5 h-3.5 text-blue-600" />Issue asset</button>}
+              </div>
+              {assetError && <p role="alert" className="mb-2 text-xs font-semibold text-rose-700">{assetError}</p>}
+              {newAsset && <form onSubmit={issueAsset} className="mb-3 p-4 rounded-xl border border-slate-200 space-y-3">
+                <AssetFields asset={newAsset} onChange={setNewAsset} disabled={assetBusy} />
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-bold" disabled={assetBusy} onClick={() => setNewAsset(null)}>Cancel</button>
+                  <button className="ui-button-primary" disabled={assetBusy}>{assetBusy ? 'Saving…' : 'Issue asset'}</button>
+                </div>
+              </form>}
+              {assets.loading ? <div className="text-center py-4 text-xs text-slate-500">Loading assets...</div>
+                : assets.error ? <p role="alert" className="text-xs text-rose-700">{assets.error}</p>
+                : !assets.rows.length ? <div className="text-center py-4 text-xs text-slate-500 bg-white rounded-xl border border-slate-200">No company assets issued.</div>
+                : <div className="space-y-2">{assets.rows.map(asset => <div key={asset.id} className="p-3 rounded-xl border border-slate-200 flex items-start justify-between gap-3 text-xs">
+                  <div>
+                    <p className="font-black text-black">{asset.asset_name} <span className="font-medium text-slate-500">· {assetTypeLabel(asset.asset_type)}</span></p>
+                    <p className="text-slate-600 mt-0.5">{asset.asset_tag ? `Tag ${asset.asset_tag}` : 'No tag'}{asset.serial_number ? ` · S/N ${asset.serial_number}` : ''} · {asset.condition.toLowerCase()}</p>
+                    <p className="text-slate-600">Issued {day(asset.issued_date)}{asset.returned_date ? ` · Returned ${day(asset.returned_date)}` : ''}</p>
+                    {asset.notes && <p className="text-slate-500 mt-0.5">{asset.notes}</p>}
+                  </div>
+                  {asset.returned_date ? <span className="px-2 py-0.5 rounded-full border border-slate-300 font-bold shrink-0">Returned</span>
+                    : <button type="button" className="px-2.5 py-1.5 rounded-lg border border-slate-200 font-bold hover:bg-blue-50 shrink-0" disabled={assetBusy} onClick={() => returnAsset(asset)}>Mark returned</button>}
+                </div>)}</div>}
+            </div>}
+
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setInspectedEmp(null)}
@@ -262,6 +343,7 @@ export function EmployeeDirectory() {
           </div>
         </Modal>
       )}
+      {isHR && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
     </div>
   );
 }

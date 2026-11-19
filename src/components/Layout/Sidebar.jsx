@@ -17,6 +17,7 @@ import {
   MessageSquare,
   MapPin,
   Ticket,
+  UserPlus,
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, setTab }) {
@@ -25,7 +26,6 @@ export function Sidebar({ currentTab, setTab }) {
   const employeeNavItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'calendar', label: 'Calendar', icon: Calendar },
-    { id: 'tickets', label: 'Tickets', icon: Ticket },
     { id: 'responses', label: 'Responses', icon: MessageSquare },
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -36,6 +36,7 @@ export function Sidebar({ currentTab, setTab }) {
     { section: 'HR Overview' },
     { id: 'hr-dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: 'Overview' },
     { id: 'hr-employees', label: 'Team', icon: Users, badge: 'Directory' },
+    { id: 'hr-add-employee', label: 'Add Employee', icon: UserPlus, badge: 'New' },
     { id: 'hr-attendance', label: 'Attendance', icon: Clock, badge: 'Company' },
     { id: 'hr-company-requests', label: 'Employee Requests', icon: FileText, badge: 'Read‑only' },
     { section: 'My Workday' },

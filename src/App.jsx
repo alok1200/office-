@@ -77,7 +77,9 @@ function AppContent() {
   const renderPage = () => {
     const companyTabs = ['hr-employees', 'hr-attendance', 'hr-company-requests'];
     const adminTabs = ['admin', 'office-location', 'admin-approvals'];
-    if ((companyTabs.includes(currentTab) && !isHR && !isSuperAdmin) ||
+    const ticketTab = currentTab === 'tickets' && !isHR && !isSuperAdmin;
+    if (ticketTab || (currentTab === 'hr-add-employee' && !isHR) ||
+        (companyTabs.includes(currentTab) && !isHR && !isSuperAdmin) ||
         (adminTabs.includes(currentTab) && !isSuperAdmin)) {
       return <p role="alert">You do not have access to this page.</p>;
     }
@@ -93,7 +95,9 @@ function AppContent() {
       case 'my-requests':
         return isSuperAdmin ? <SuperAdminRequestsPage /> : <MyRequestsPage />;
       case 'hr-employees':
-        return <HREmployeesPage />;
+        return <HREmployeesPage key="team" />;
+      case 'hr-add-employee':
+        return <HREmployeesPage key="add" openAdd />;
       case 'hr-attendance':
         return isSuperAdmin ? <SuperAdminReportsPage /> : <HRAttendancePage setTab={setCurrentTab} />;
       case 'hr-company-requests':

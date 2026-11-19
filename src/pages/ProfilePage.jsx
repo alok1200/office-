@@ -1,9 +1,22 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { User, Mail, Phone, Calendar, Building, Shield, CheckCircle } from 'lucide-react';
+import { api } from '../services/api';
+import { assetTypeLabel } from '../components/HR/AddEmployeeModal';
+import { User, Mail, Phone, Calendar, Building, Shield, CheckCircle, Laptop } from 'lucide-react';
 
 export function ProfilePage() {
   const { currentUser } = useAuth();
+  const [assets, setAssets] = useState({ loading: true, rows: [], error: '' });
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'HR_ADMIN') { setAssets({ loading: false, rows: [], error: '' }); return; }
+    let active = true;
+    api.getMyAssets().then(res => {
+      if (!res.success) throw new Error(res.error || 'Could not load your assets.');
+      if (active) setAssets({ loading: false, rows: res.data, error: '' });
+    }).catch(error => { if (active) setAssets({ loading: false, rows: [], error: error.message }); });
+    return () => { active = false; };
+  }, [currentUser?.id]);
 
   if (!currentUser) return null;
 
@@ -98,11 +111,30 @@ export function ProfilePage() {
             {currentUser.role === 'HR_ADMIN' && (
               <li className="flex items-center gap-2">
                 <CheckCircle className="w-3.5 h-3.5 text-blue-600" />
-                <span>HR Company-wide visibility: Read-only access to employees, attendance, and requests</span>
+                <span>HR access: view company employees, attendance and requests; onboard new employees and issue company assets</span>
               </li>
             )}
           </ul>
         </div>
+
+        {currentUser.role === 'HR_ADMIN' && (
+          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2">
+            <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5">
+              <Laptop className="w-4 h-4 text-blue-600" />
+              <span>My Company Assets</span>
+            </h4>
+            {assets.loading ? <p className="text-xs text-slate-500">Loading assets…</p>
+              : assets.error ? <p role="alert" className="text-xs text-rose-700">{assets.error}</p>
+              : !assets.rows.length ? <p className="text-xs text-slate-500">No company assets are assigned to you.</p>
+              : <ul className="space-y-2">{assets.rows.map(asset => (
+                <li key={asset.id} className="text-xs border border-slate-200 rounded-lg p-3">
+                  <p className="font-black text-black">{asset.asset_name} <span className="font-medium text-slate-500">· {assetTypeLabel(asset.asset_type)}</span></p>
+                  <p className="text-slate-600">{asset.asset_tag ? `Tag ${asset.asset_tag}` : 'No tag'}{asset.serial_number ? ` · S/N ${asset.serial_number}` : ''}</p>
+                  <p className="text-slate-600">Issued {String(asset.issued_date).slice(0, 10)}{asset.returned_date ? ` · Returned ${String(asset.returned_date).slice(0, 10)}` : ' · In your possession'}</p>
+                </li>
+              ))}</ul>}
+          </div>
+        )}
       </div>
     </div>
   );
