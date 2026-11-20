@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { Modal } from '../components/Common/Modal';
 import { StatusBadge } from '../components/Common/StatusBadge';
-import { MyRequestsPage } from './MyRequestsPage';
 import {correctionModes, correctionFormPayload} from '../services/hrCorrectionForm';
 
 const todayIST = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
@@ -68,7 +67,7 @@ function AuditHistory({ ticket, onClose }) {
 
 export function AttendanceTicketsPage() {
   const { currentUserId, isHR, isSuperAdmin } = useAuth();
-  const [mode, setMode] = useState('corrections'), [filter, setFilter] = useState('ALL');
+  const [filter, setFilter] = useState('ALL');
   const [resource, setResource] = useState({ owner: null, loading: true, rows: [], error: '' });
   const [employees, setEmployees] = useState([]), [directoryError, setDirectoryError] = useState('');
   const [directoryVersion,setDirectoryVersion]=useState(0), [cancelling,setCancelling]=useState(null);
@@ -94,10 +93,7 @@ export function AttendanceTicketsPage() {
   const saved = message => { setCreating(false); setReview(null); setNotice(message); refresh(); };
   return <div className="space-y-6">
     <div className="inbox-heading"><div><h1><Ticket size={23} />{isSuperAdmin ? 'HR-Requests' : 'Tickets'}</h1><p>{isHR ? 'Raise employee attendance corrections for Super Admin review.' : isSuperAdmin ? 'Review HR correction tickets and update attendance on approval.' : 'Track attendance corrections HR has raised for you.'}</p></div>{isHR && <button className="ui-button-primary" onClick={() => {setDirectoryVersion(v=>v+1);setCreating(true);}} disabled={!employees.length}><Plus size={17} />Raise correction ticket</button>}</div>
-    {!isSuperAdmin && <div className="inbox-toolbar"><button aria-pressed={mode === 'corrections'} onClick={() => setMode('corrections')}>Attendance corrections</button> </div>}
-    {/* <button aria-pressed={mode==='personal'} onClick={()=>setMode('personal')}>My leave / WFH requests</button>    // this we dont use */}
-    {mode === 'personal' && !isSuperAdmin ? <MyRequestsPage /> : <>
-      <div className="inbox-toolbar" role="group" aria-label="Filter tickets">{['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(status => <button key={status} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status === 'ALL' ? 'All tickets' : status[0] + status.slice(1).toLowerCase()}</button>)}<button aria-label="Refresh tickets" disabled={loading} onClick={() => refresh()}><RefreshCw size={16} /></button></div>
+    <div className="inbox-toolbar" role="group" aria-label="Filter tickets">{['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map(status => <button key={status} aria-pressed={filter === status} onClick={() => setFilter(status)}>{status === 'ALL' ? 'All tickets' : status[0] + status.slice(1).toLowerCase()}</button>)}<button aria-label="Refresh tickets" disabled={loading} onClick={() => refresh()}><RefreshCw size={16} /></button></div>
       {notice && <p role="status" className="sa-request-notice">{notice}</p>}{(resource.error || directoryError) && <p role="alert" className="sa-info">{resource.error || directoryError}<button className="sa-text-button" onClick={() => {refresh();setDirectoryVersion(v=>v+1);}}>Retry</button></p>}
       {loading ? <p role="status" className="sa-empty">Loading attendance tickets…</p> : !visible.length ? <div className="inbox-empty"><ClipboardList size={30} /><h2>No tickets in this category</h2><p>{isHR ? 'Raise a correction ticket when an employee misses a punch.' : 'Attendance correction tickets will appear here.'}</p></div> : <div className="ticket-list">{visible.map(row => <article className="ticket-card" key={row.id}>
         <div className="ticket-card-heading"><div><h2>Ticket #{row.id} · {row.first_name} {row.last_name}</h2><p>{row.emp_code} · {row.department_name} · {dayOf(row.start_date)}</p></div><StatusBadge status={row.status} /></div>
@@ -108,7 +104,6 @@ export function AttendanceTicketsPage() {
         {row.decision_remarks && <div className="sa-info"><div><strong>Super Admin response</strong><p>{row.decision_remarks}</p><small>Reviewed by {row.reviewer_first_name} {row.reviewer_last_name} · {stamp(row.decision_date)}</small>{row.metadata?.correction?.after && <p>{row.metadata?.requested_status ? `Updated status: ${statusLabel[row.metadata.correction.after.status] || row.metadata.correction.after.status}` : `Updated punches: ${clock(row.metadata.correction.after.check_in)} → ${clock(row.metadata.correction.after.check_out)} IST`}</p>}</div></div>}
         <div className="ticket-card-actions"><button className="sa-text-button" onClick={() => setAudit(row)}><History size={16} />Audit history</button>{isHR && row.status === 'PENDING' && Number(row.metadata?.raised_by) === currentUserId && <button type="button" className="sa-text-button" disabled={cancelling !== null} onClick={() => cancelTicket(row.id)}>{cancelling === row.id ? 'Cancelling…' : 'Cancel ticket'}</button>}{isSuperAdmin && row.status === 'PENDING' && <><button className="ui-button-primary" onClick={() => setReview({ ticket: row, status: 'APPROVED' })}><Check size={16} />Accept</button><button className="sa-reject-button" onClick={() => setReview({ ticket: row, status: 'REJECTED' })}><X size={16} />Reject</button></>}</div>
       </article>)}</div>}
-    </>}
     {creating && <RaiseTicket employees={employees} onClose={() => setCreating(false)} onSaved={saved} />}
     {review && <ReviewTicket {...review} onClose={() => setReview(null)} onSaved={saved} />}
     {audit && <AuditHistory ticket={audit} onClose={() => setAudit(null)} />}
