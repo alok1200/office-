@@ -18,6 +18,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
+import { CompanyLogo } from '../components/Common/CompanyLogo';
 
 const todayLabel = () =>
   new Date().toLocaleDateString('en-IN', {
@@ -166,21 +167,23 @@ export function HRDashboardPage({ setTab }) {
 
   return (
     <div className="space-y-6">
-      {/* Hero Banner */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 p-6 sm:p-8 text-white shadow-lg">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-white/10 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-16 left-1/3 h-48 w-48 rounded-full bg-sky-400/20 blur-2xl" />
+      {/* Hero Banner — White Background & Blue Text Theme */}
+      <section className="relative overflow-hidden rounded-3xl bg-white border border-blue-200 p-6 sm:p-8 shadow-sm">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-blue-50 blur-2xl" />
 
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold tracking-wide backdrop-blur-xs">
-              <CalendarDays className="w-3.5 h-3.5" />
-              <span>{todayLabel()}</span>
+          <div className="space-y-2.5">
+            <div className="flex flex-wrap items-center gap-3">
+              <CompanyLogo variant="compact" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-[11px] font-bold text-blue-700 tracking-wide">
+                <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
+                <span>{todayLabel()}</span>
+              </div>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-blue-950">
               Welcome back, {currentUser?.first_name || 'HR Admin'}
             </h1>
-            <p className="text-sm text-blue-100 max-w-xl">
+            <p className="text-sm text-blue-700 max-w-xl font-medium">
               Monitor real-time company attendance, onboard new employees with assets, and raise attendance tickets for Super Admin review.
             </p>
           </div>
@@ -189,7 +192,7 @@ export function HRDashboardPage({ setTab }) {
             <button
               type="button"
               onClick={() => setTab('hr-add-employee')}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-black text-blue-700 shadow-sm hover:bg-blue-50 transition-all active:scale-[0.98]"
+              className="ui-button-primary"
             >
               <UserPlus className="w-4 h-4" />
               <span>Add Employee</span>
@@ -197,12 +200,12 @@ export function HRDashboardPage({ setTab }) {
             <button
               type="button"
               onClick={() => setTab('tickets')}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/15 border border-white/25 px-4 py-2.5 text-xs font-black text-white backdrop-blur-xs hover:bg-white/25 transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-2 rounded-xl bg-white border-2 border-blue-600 px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50 transition-all active:scale-[0.98]"
             >
-              <Ticket className="w-4 h-4" />
+              <Ticket className="w-4 h-4 text-blue-600" />
               <span>Raise Ticket</span>
               {pendingTickets > 0 && (
-                <span className="ml-0.5 rounded-full bg-amber-400 px-1.5 py-0.5 text-[10px] font-black text-slate-900">
+                <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-black text-white">
                   {pendingTickets}
                 </span>
               )}
@@ -213,7 +216,7 @@ export function HRDashboardPage({ setTab }) {
               disabled={refreshing}
               title="Refresh dashboard"
               aria-label="Refresh dashboard"
-              className="inline-flex items-center justify-center rounded-xl bg-white/15 border border-white/25 p-2.5 text-white hover:bg-white/25 transition-all disabled:opacity-60"
+              className="ui-icon-button"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
             </button>

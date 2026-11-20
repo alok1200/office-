@@ -5,23 +5,17 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    let active = true;
-    async function restore() {
-      const token = localStorage.getItem('knooviq_auth_token');
-      try {
-        if (token) {
-          const res = await api.getCurrentUser();
-          if (res.success && res.user) { if (active) setCurrentUser(res.user); return; }
-        }
-        localStorage.removeItem('knooviq_auth_token');
-        localStorage.removeItem('knooviq_user_id');
-      } catch {
-        localStorage.removeItem('knooviq_auth_token');
-        localStorage.removeItem('knooviq_user_id');
-      } finally { if (active) setLoading(false); }
+    const token = localStorage.getItem('knooviq_auth_token');
+    if (token) {
+      api.logout().catch(() => {});
     }
-    restore();
-    return () => { active = false; };
+    localStorage.removeItem('knooviq_auth_token');
+    localStorage.removeItem('knooviq_user_id');
+    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
+      window.history.replaceState(null, '', '/');
+    }
+    setCurrentUser(null);
+    setLoading(false);
   }, []);
   const login = async (identifier, password) => {
     try {
