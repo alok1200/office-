@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { StatusBadge } from '../Common/StatusBadge';
 import { Modal } from '../Common/Modal';
-import { Search, Calendar, Eye, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Calendar, Eye, AlertCircle, RefreshCw, Download } from 'lucide-react';
 
 export function CompanyAttendanceTable() {
   const { currentUserId } = useAuth();
@@ -17,6 +17,32 @@ export function CompanyAttendanceTable() {
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectedRecord, setInspectedRecord] = useState(null);
+  const [exporting, setExporting] = useState('');
+  const [exportError, setExportError] = useState('');
+
+  const handleExportMonth = async (format) => {
+    if (exporting) return;
+    setExporting(format);
+    setExportError('');
+    try {
+      const [yearStr, monthStr] = String(targetDate || new Date().toISOString().slice(0, 10)).split('-');
+      const year = Number(yearStr);
+      const month = Number(monthStr);
+      const blob = await api.exportCompanyMonthlyAttendance({ year, month }, format);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `attendance-${year}-${String(month).padStart(2, '0')}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setExportError(err.message || 'Could not export monthly attendance.');
+    } finally {
+      setExporting('');
+    }
+  };
 
   const fetchAttendance = async (silent=false) => {
     const ticket=++sequence.current;
@@ -132,8 +158,37 @@ export function CompanyAttendanceTable() {
           >
             <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
           </button>
+
+          <button
+            type="button"
+            disabled={Boolean(exporting)}
+            onClick={() => handleExportMonth('xlsx')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-600 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors shadow-2xs disabled:opacity-60"
+            title="Download full month attendance as Excel (.xlsx)"
+          >
+            <Download className="w-3.5 h-3.5" style={{ color: 'white' }} />
+            <span>{exporting === 'xlsx' ? 'Exporting…' : 'Export Excel'}</span>
+          </button>
+
+          <button
+            type="button"
+            disabled={Boolean(exporting)}
+            onClick={() => handleExportMonth('csv')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-xs font-bold transition-colors shadow-2xs disabled:opacity-60"
+            title="Download full month attendance as CSV"
+          >
+            <Download className="w-3.5 h-3.5 text-blue-600" />
+            <span>{exporting === 'csv' ? 'Exporting…' : 'Export CSV'}</span>
+          </button>
         </div>
       </div>
+
+      {exportError && (
+        <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2 text-rose-700 font-semibold">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{exportError}</span>
+        </div>
+      )}
 
       {error && <p role="alert" className="sa-request-error">{error} <button type="button" onClick={fetchAttendance}>Retry</button></p>}
       {/* Table */}

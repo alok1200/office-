@@ -4,10 +4,10 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
     const failure = (message, code = 'GPS_UNAVAILABLE') => Object.assign(new Error(message), { code });
     if (secureContext === false) { reject(failure('Location requires HTTPS or localhost. Open the app on a secure connection and retry.', 'GPS_INSECURE_CONTEXT')); return; }
     if (!geolocation) { reject(failure('GPS is unavailable in this browser. Enable device Location Services and use a supported browser.')); return; }
-    let settled = false, watchId, timer, graceTimer, best;
+    let settled = false, watchId, timer, graceTimer, kickTimer, best;
     const finish = (error, sample) => {
       if (settled) return;
-      settled = true; clearTimeout(timer); clearTimeout(graceTimer);
+      settled = true; clearTimeout(timer); clearTimeout(graceTimer); clearTimeout(kickTimer);
       if (watchId !== undefined) geolocation.clearWatch?.(watchId);
       signal?.removeEventListener('abort', aborted);
       globalThis.document?.removeEventListener('visibilitychange', visibilityChanged);
@@ -31,11 +31,11 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         if (typeof geolocation.watchPosition !== 'function') finish(failure('GPS returned an invalid reading. Please retry.'));
         return;
       }
-      // Reject stale cached fixes even if a browser ignores maximumAge: 0.
+      // Reject genuinely stale cached fixes (>30s old) while tolerating stationary OS fixes and minor clock skew.
       const now = Date.now();
       const timestamp = position.timestamp ?? now;
-      if (!Number.isFinite(timestamp) || now - timestamp > 10000 || timestamp - now > 1000) return;
-      const sample = { latitude, longitude, accuracy, readAt: timestamp };
+      if (!Number.isFinite(timestamp) || now - timestamp > 30000 || timestamp - now > 5000) return;
+      const sample = { latitude, longitude, accuracy, readAt: Math.min(timestamp, now) };
       if (!best || sample.accuracy <= best.accuracy) {
         best = sample;
         onProgress?.(best);
@@ -47,10 +47,22 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
       }
       else if (typeof geolocation.watchPosition !== 'function') timedOut();
     };
+    let kickedFallback = false;
+    const triggerFallback = () => {
+      if (settled || best || kickedFallback || typeof geolocation.getCurrentPosition !== 'function') return;
+      kickedFallback = true;
+      try {
+        // Active one-shot query nudges browsers (especially Safari/Chrome indoors) when watchPosition stalls.
+        geolocation.getCurrentPosition(success, err => {
+          if (err?.code === 1) failed(err);
+        }, { enableHighAccuracy: true, maximumAge: 10000, timeout: Math.max(4000, timeoutMs - 3000) });
+      } catch { /* watchPosition remains active */ }
+    };
     const failed = error => {
       if (settled) return;
       if (error.code === 1) finish(failure('Location permission denied. Allow location for this site and enable precise location in your device settings, then retry.', 'GPS_PERMISSION_DENIED'));
       else if (typeof geolocation.watchPosition !== 'function') finish(failure(error.code === 3 ? 'GPS timed out. Enable Location Services and retry outdoors or near a window.' : 'GPS is unavailable. Enable Location Services and precise location, then retry.', error.code === 3 ? 'GPS_TIMEOUT' : 'GPS_UNAVAILABLE'));
+      else triggerFallback();
       // A temporary unavailable/timeout update can be followed by a better fix.
     };
     const options = { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs };
@@ -59,6 +71,9 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         watchId = geolocation.watchPosition(success, failed, options);
         // Also handles synchronous test/browser callbacks before the ID is assigned.
         if (settled && watchId !== undefined) geolocation.clearWatch?.(watchId);
+        else if (!best && typeof geolocation.getCurrentPosition === 'function') {
+          kickTimer = setTimeout(triggerFallback, Math.min(3500, Math.floor(timeoutMs / 3)));
+        }
       } else geolocation.getCurrentPosition(success, failed, options);
     } catch { finish(failure('Location access is blocked. Check site permissions and use HTTPS or localhost.')); }
   });

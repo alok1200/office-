@@ -171,6 +171,16 @@ export const api = {
     });
     return res.json();
   },
+  exportCompanyMonthlyAttendance: async (filters, format) => {
+    const res = await appFetch(`${API_BASE}/attendance/export?${new URLSearchParams({ ...filters, format })}`, {
+      headers: getHeaders()
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.error || 'Export failed.');
+    }
+    return res.blob();
+  },
 
   getAttendanceCorrections: async (signal) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, {headers:getHeaders(),signal})).json(),
   raiseAttendanceCorrection: async (payload) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, {method:'POST',headers:getHeaders(),body:JSON.stringify(payload)})).json(),
@@ -229,6 +239,7 @@ export const api = {
     return res.json();
   },
   createEmployee: async (payload) => (await appFetch(`${API_BASE}/employees/company`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) })).json(),
+  updateEmployee: async (id, payload) => (await appFetch(`${API_BASE}/employees/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) })).json(),
   getEmployeeDetails: async (id) => (await appFetch(`${API_BASE}/employees/${id}/details`, { headers: getHeaders() })).json(),
   addEmployeeAsset: async (id, payload) => (await appFetch(`${API_BASE}/employees/${id}/assets`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) })).json(),
   returnEmployeeAsset: async (assetId, returned_date) => (await appFetch(`${API_BASE}/employees/assets/${assetId}/return`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ returned_date }) })).json(),

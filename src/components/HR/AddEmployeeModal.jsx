@@ -73,19 +73,19 @@ export function AddEmployeeModal({ onClose, onSaved }) {
           <Field label="First name">{text('first_name', { required: true, maxLength: 100 })}</Field>
           <Field label="Last name">{text('last_name', { required: true, maxLength: 100 })}</Field>
           <Field label="Work email">{text('email', { type: 'email', required: true, maxLength: 255, autoComplete: 'off' })}</Field>
-          <Field label="Temporary password">{text('password', { type: 'password', required: true, minLength: 8, maxLength: 128, autoComplete: 'new-password', placeholder: 'At least 8 characters' })}</Field>
-          <Field label="Phone">{text('phone', { type: 'tel', maxLength: 50 })}</Field>
-          <Field label="Date of birth">{text('date_of_birth', { type: 'date', max: today() })}</Field>
-          <div className="sm:col-span-2"><Field label="Address"><textarea className={inputClass} rows={2} maxLength={500} value={form.address} onChange={e => set('address', e.target.value)} /></Field></div>
-          <Field label="Emergency contact name">{text('emergency_contact_name', { maxLength: 150 })}</Field>
-          <Field label="Emergency contact phone">{text('emergency_contact_phone', { type: 'tel', maxLength: 50 })}</Field>
+          <Field label="Password">{text('password', { type: 'password', required: true, minLength: 8, maxLength: 128, autoComplete: 'new-password', placeholder: 'At least 8 characters' })}</Field>
+          <Field label="Phone">{text('phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
+          <Field label="Date of birth">{text('date_of_birth', { type: 'date', required: true, max: today() })}</Field>
+          <div className="sm:col-span-2"><Field label="Address"><textarea className={inputClass} rows={2} required maxLength={500} value={form.address} onChange={e => set('address', e.target.value)} /></Field></div>
+          <Field label="Emergency contact name">{text('emergency_contact_name', { required: true, maxLength: 150 })}</Field>
+          <Field label="Emergency contact phone">{text('emergency_contact_phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
         </div>
       </fieldset>
 
       <fieldset className="space-y-3" disabled={busy}>
         <legend className="text-sm font-black text-black mb-2">Employment</legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Employee ID (optional)">{text('employee_id', { maxLength: 50, placeholder: 'Auto-generated, e.g. KNV-1010' })}</Field>
+          <Field label="Employee ID">{text('employee_id', { required: true, maxLength: 50, placeholder: 'e.g. KNV-1010' })}</Field>
           <Field label="Joining date">{text('joining_date', { type: 'date', required: true })}</Field>
           <Field label="Department"><select className={inputClass} value={form.department_name} onChange={e => set('department_name', e.target.value)}>{DEPARTMENTS.map(d => <option key={d}>{d}</option>)}<option value={OTHER_DEPARTMENT}>Other (type a new department)…</option></select></Field>
           {form.department_name === OTHER_DEPARTMENT && <Field label="New department name"><input className={inputClass} required maxLength={100} value={otherDepartment} disabled={busy} onChange={e => setOtherDepartment(e.target.value)} placeholder="e.g. Customer Support" autoFocus /></Field>}

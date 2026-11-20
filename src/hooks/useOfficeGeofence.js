@@ -42,14 +42,27 @@ export function useOfficeGeofence(enabled) {
     return () => { document.removeEventListener('visibilitychange', changed); };
   }, [enabled, loadOffice]);
   useEffect(() => {
-    if (!enabled || !tracking || !visible || !navigator.geolocation) return;
+    if (!enabled || !visible || !navigator.geolocation) return;
     const user = currentUserId;
     let active = true;
+    setTracking(true);
     const id = navigator.geolocation.watchPosition(position => {
-      if (active && mounted.current && activeUser.current === user) { setSample({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, readAt: Date.now() }); setError(''); }
-    }, event => { if (active && mounted.current && activeUser.current === user) { setSample(null); setError(event.code === 1 ? 'Allow GPS access to enable attendance.' : 'GPS unavailable. Refresh your location.'); } }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+      if (active && mounted.current && activeUser.current === user) {
+        setSample({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, readAt: Date.now() });
+        setError('');
+      }
+    }, event => {
+      if (active && mounted.current && activeUser.current === user) {
+        if (event.code === 1) {
+          setSample(null);
+          setError('Allow GPS access to enable attendance.');
+        } else if (!sampleRef.current || Date.now() - sampleRef.current.readAt > 30000) {
+          setError('GPS unavailable. Refresh your location.');
+        }
+      }
+    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
     return () => { active = false; navigator.geolocation.clearWatch(id); };
-  }, [enabled, tracking, visible, currentUserId]);
+  }, [enabled, visible, currentUserId]);
   const refresh = async () => {
     if (!enabled || reading) return;
     const ticket = ++sequence.current;
@@ -75,11 +88,11 @@ export function useOfficeGeofence(enabled) {
     const timer = setInterval(() => setClock(Date.now()), 1000);
     return () => clearInterval(timer);
   }, [enabled, tracking, visible]);
-  const stale = !!sample && Math.max(clock, Date.now()) - sample.readAt > 20000;
+  const stale = !!sample && Math.max(clock, Date.now()) - sample.readAt > 30000;
   const evaluation = evaluateLocation(officeState.office, sample);
   const eligible = enabled && tracking && visible && !!sample && !error && !officeState.error && !stale && evaluation.eligible;
   const getPunchLocation = async () => {
-    // Always obtain a new reading and saved office before a consequential punch.
+    // Always obtain a valid reading and saved office before a consequential punch.
     const actor = currentUserId;
     if (!enabled || !mounted.current || document.visibilityState !== 'visible') throw new Error('Location check cancelled. Keep this page open and try again.');
     locationRequest.current?.abort();
@@ -87,17 +100,17 @@ export function useOfficeGeofence(enabled) {
     const office = await loadOffice();
     if (!mounted.current || actor !== activeUser.current || controller.signal.aborted) throw new Error('Attendance cancelled because the page or account changed.');
     if (!office) throw new Error('No saved office is available. Contact your administrator.');
-    // Fast path: the page keeps a live GPS watch warm, so reuse a reading taken within the last 8 seconds.
+    const maxAcc = Number(office.max_accuracy_m ?? 75);
+    // Fast path: reuse a fresh live watch reading taken within the last 30 seconds if accurate and inside radius.
     const warm = sampleRef.current;
-    if (warm && trackingRef.current && Date.now() - warm.readAt <= 8000 && warm.accuracy <= Number(office.max_accuracy_m ?? 50)) {
+    if (warm && Date.now() - warm.readAt <= 30000 && warm.accuracy <= maxAcc) {
       const quick = evaluateLocation(office, warm);
       if (quick.eligible) return { latitude: warm.latitude, longitude: warm.longitude, accuracy: warm.accuracy };
     }
     setLiveAccuracy(null);
     let location;
     try {
-      // 12 s is enough for a phone to lock GPS; a device that cannot reach the limit by then needs a better signal, not more waiting.
-      location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal, timeoutMs: 12000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
+      location = await readCurrentLocation({ maximumAccuracy: maxAcc, signal: controller.signal, timeoutMs: 15000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
     } finally { if (mounted.current) setLiveAccuracy(null); }
     if (!mounted.current || actor !== activeUser.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled because the signed-in account changed.');
     const evaluation = evaluateLocation(office, location);

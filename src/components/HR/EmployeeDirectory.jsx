@@ -4,8 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
 import { StatusBadge } from '../Common/StatusBadge';
-import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop, KeyRound, Trash2 } from 'lucide-react';
+import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop, KeyRound, Trash2, Edit2 } from 'lucide-react';
 import { AddEmployeeModal, AssetFields, blankAsset, assetTypeLabel } from './AddEmployeeModal';
+import { EditEmployeeModal } from './EditEmployeeModal';
 
 const day = value => value ? String(value).slice(0, 10) : '—';
 
@@ -36,6 +37,7 @@ export function EmployeeDirectory({ openAdd = false }) {
   const [deleteEmp, setDeleteEmp] = useState(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [editEmp, setEditEmp] = useState(null);
 
   const handleDeleteEmployee = async () => {
     if (deleteBusy || !deleteEmp) return;
@@ -282,12 +284,23 @@ export function EmployeeDirectory({ openAdd = false }) {
                   </button>
                 </div>
                 {canManageAccount(emp) && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div className={`grid ${isHR && emp.role === 'EMPLOYEE' ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 pt-1`}>
+                    {isHR && emp.role === 'EMPLOYEE' && (
+                      <button
+                        type="button"
+                        onClick={() => setEditEmp(emp)}
+                        title="Edit employee details"
+                        className="px-2 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center justify-center gap-1 transition-colors shadow-2xs"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span>Edit</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => openResetPassword(emp)}
                       title="Reset forgotten password"
-                      className="px-2.5 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                      className="px-2 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center justify-center gap-1 transition-colors shadow-2xs"
                     >
                       <KeyRound className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                       <span>Password</span>
@@ -296,7 +309,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                       type="button"
                       onClick={() => { setDeleteError(''); setDeleteEmp(emp); }}
                       title={emp.role === 'HR_ADMIN' ? 'Delete HR Admin account' : 'Delete employee account'}
-                      className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                      className="px-2 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center justify-center gap-1 transition-colors shadow-2xs"
                     >
                       <Trash2 className="w-3.5 h-3.5 shrink-0" />
                       <span>Delete</span>
@@ -440,6 +453,7 @@ export function EmployeeDirectory({ openAdd = false }) {
         </Modal>
       )}
       {isHR && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
+      {isHR && editEmp && <EditEmployeeModal employee={editEmp} onClose={() => setEditEmp(null)} onSaved={message => { setEditEmp(null); setNotice(message); fetchEmployees(); }} />}
 
       {(isHR || isSuperAdmin) && resetEmp && (
         <Modal
