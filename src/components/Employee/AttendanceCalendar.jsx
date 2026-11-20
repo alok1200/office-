@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { calendarStatuses, getCalendarStatus } from '../Common/calendarStatus';
 import { StatusBadge } from '../Common/StatusBadge';
 import { Modal } from '../Common/Modal';
+import {useDataRefresh} from '../../hooks/useDataRefresh';
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,30 +18,41 @@ import {
 } from 'lucide-react';
 
 export function AttendanceCalendar() {
-  const { currentUserId } = useAuth();
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(11); // November
+  const { currentUserId,isSuperAdmin } = useAuth();
+  const todayStr=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const [employee,setEmployee]=useState(''),[employees,setEmployees]=useState([]),[directoryError,setDirectoryError]=useState('');
+  const [error,setError]=useState('');const sequence=useRef(0);
+  const [currentYear, setCurrentYear] = useState(Number(todayStr.slice(0,4)));
+  const [currentMonth, setCurrentMonth] = useState(Number(todayStr.slice(5,7)));
   const [calendarData, setCalendarData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(null);
 
-  const fetchCalendar = async () => {
-    setLoading(true);
+  const fetchCalendar = async (silent=false) => {
+    const ticket=++sequence.current;
+    if(silent!==true)setLoading(true);setError('');
     try {
-      const res = await api.getMyCalendar(currentUserId, currentYear, currentMonth);
+      const res = await api.getMyCalendar(currentUserId, currentYear, currentMonth, isSuperAdmin ? employee : undefined);
+      if(ticket!==sequence.current)return;
+      if(!res.success)throw new Error(res.error || 'Could not load calendar.');
       if (res.success && res.data) {
         setCalendarData(res.data);
+        setSelectedDay(old=>old?res.data.days.find(day=>day.date===old.date)||null:null);
       }
     } catch (err) {
-      console.error('Failed to load calendar:', err);
+      if(ticket===sequence.current)setError(err.message || 'Could not load calendar.');
     } finally {
-      setLoading(false);
+      if(ticket===sequence.current)setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchCalendar();
-  }, [currentUserId, currentYear, currentMonth]);
+    setCalendarData(null);setSelectedDay(null);fetchCalendar();
+    return()=>{++sequence.current;};
+  }, [currentUserId, currentYear, currentMonth, employee, isSuperAdmin]);
+  const loadDirectory=async()=>{try{const response=await api.getCompanyEmployees(currentUserId);if(!response.success)throw new Error(response.error);setEmployees(response.data.filter(row=>row.role!=='SUPER_ADMIN'));setDirectoryError('');}catch(error){setDirectoryError(error.message || 'Could not load employees.');}};
+  useEffect(()=>{if(isSuperAdmin)loadDirectory();},[isSuperAdmin,currentUserId]);
+  useDataRefresh(()=>{fetchCalendar(true);if(isSuperAdmin)loadDirectory();},['attendance','requests','holidays','employees']);
 
   const handlePrevMonth = () => {
     if (currentMonth === 1) {
@@ -65,7 +77,7 @@ export function AttendanceCalendar() {
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const todayStr = new Date().toISOString().split('T')[0];
+
 
   const getDayCardStyles = (dayItem) => {
     const isToday = dayItem.date === todayStr;
@@ -88,7 +100,7 @@ export function AttendanceCalendar() {
         <div>
           <h2 className="text-xl font-black text-black flex items-center gap-2">
             <CalendarIcon className="w-5 h-5 text-blue-600" />
-            <span>My Attendance Calendar</span>
+            <span>{isSuperAdmin ? 'Company Attendance Calendar' : 'My Attendance Calendar'}</span>
           </h2>
           <p className="text-xs text-slate-600 mt-1">
             Monthly attendance breakdown, leaves, holidays, and punch details
@@ -100,7 +112,7 @@ export function AttendanceCalendar() {
           <button
             onClick={handlePrevMonth}
             className="p-2 rounded-xl border border-slate-200 hover:bg-blue-50 text-blue-600 transition-colors shadow-2xs"
-            title="Previous Month"
+            title="Previous Month" disabled={currentYear===2000 && currentMonth===1}
           >
             <ChevronLeft className="w-5 h-5 text-blue-600" />
           </button>
@@ -112,13 +124,16 @@ export function AttendanceCalendar() {
           <button
             onClick={handleNextMonth}
             className="p-2 rounded-xl border border-slate-200 hover:bg-blue-50 text-blue-600 transition-colors shadow-2xs"
-            title="Next Month"
+            title="Next Month" disabled={currentYear===2100 && currentMonth===12}
           >
             <ChevronRight className="w-5 h-5 text-blue-600" />
           </button>
         </div>
       </div>
 
+      {isSuperAdmin && <label className="flex flex-wrap items-center gap-3 text-sm font-bold">Employee<select value={employee} onChange={e=>setEmployee(e.target.value)} className="rounded-xl border border-blue-200 bg-white p-2 text-black"><option value="">Company holidays</option>{employees.map(person=><option key={person.id} value={person.id}>{person.first_name} {person.last_name} ({person.employee_id})</option>)}</select></label>}
+      {directoryError && <p role="alert" className="sa-request-error">{directoryError}<button onClick={loadDirectory}>Retry employees</button></p>}
+      {error && <p role="alert" className="sa-request-error">{error}<button onClick={()=>fetchCalendar()}>Retry calendar</button></p>}
       {/* Visual Legend */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5">
@@ -168,7 +183,7 @@ export function AttendanceCalendar() {
 
                 <div className="mt-1">
                   <p className="text-[11px] font-bold text-black truncate">
-                    {getCalendarStatus(item.status)?.label || item.status.replaceAll('_', ' ')}
+                    {getCalendarStatus(item.status)?.label || (item.status === 'NOT_APPLICABLE' ? '—' : item.status.replaceAll('_', ' '))}
                   </p>
                   {item.statusDetails && (
                     <p className="text-[10px] text-slate-500 truncate font-medium" title={item.statusDetails}>

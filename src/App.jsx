@@ -85,7 +85,7 @@ function AppContent() {
     }
     switch (currentTab) {
       case 'admin':
-        return <SuperAdminSettings setTab={setCurrentTab} />;
+        return <SuperAdminSettings key="users" initialTab="users" setTab={setCurrentTab} />;
       case 'hr-dashboard':
         return <HRDashboardPage setTab={setCurrentTab} />;
       case 'calendar':
@@ -111,7 +111,7 @@ function AppContent() {
       case 'profile':
         return <ProfilePage />;
       case 'office-location':
-        return <SuperAdminSettings setTab={setCurrentTab} />;
+        return <SuperAdminSettings key="offices" setTab={setCurrentTab} />;
       case 'admin-approvals':
         return <AdminApprovalsPage />;
       default:

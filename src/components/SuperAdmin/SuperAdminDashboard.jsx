@@ -1,3 +1,4 @@
+import {useDataRefresh} from '../../hooks/useDataRefresh';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, FileText, Info, Loader2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { CompanyLogo } from '../Common/CompanyLogo';
@@ -24,6 +25,7 @@ function useResource(fetcher, userId) {
     }
   }, [fetcher, userId]);
   useEffect(() => { refresh(); }, [refresh]);
+  useDataRefresh(refresh,['attendance','requests','holidays','employees','offices']);
   return { ...state, refresh };
 }
 
@@ -67,7 +69,7 @@ const recent = { data: [], loading: false, error: null, refresh: () => {} }; // 
     <div className="sa-top-grid">
       <GeofenceCard resource={config} setTab={setTab} />
     <section className="sa-card sa-team"><Title icon={Users} aside={<button className="sa-text-button" onClick={() => setTab('hr-employees')}>View team <ArrowRight size={14} /></button>}>Team Status</Title><p className="sa-description">Today's attendance across your team. Precise locations are private.</p>
-      <State resource={team} empty={!teamRows.length} emptyText="No team members found."><div className="sa-team-grid">{teamRows.slice(0, 4).map(person => <button className="sa-person" key={person.emp_code} onClick={() => setTab('hr-employees')}><div className="sa-person-top"><span className="sa-avatar">{person.first_name?.[0]}{person.last_name?.[0]}</span><span><strong>{person.first_name} {person.last_name}</strong><small>{person.emp_code} · {person.department_name || 'Team'}</small></span></div><Pill value={person.current_state || person.status || 'NOT_CHECKED_IN'} /></button>)}</div></State>
+      <State resource={team} empty={!teamRows.length} emptyText="No team members found."><div className="sa-team-grid">{teamRows.slice(0, 4).map(person => <button className="sa-person" key={person.emp_code} onClick={() => setTab('hr-employees')}><div className="sa-person-top"><span className="sa-avatar">{person.first_name?.[0]}{person.last_name?.[0]}</span><span><strong>{person.first_name} {person.last_name}</strong><small>{person.emp_code} · {person.department_name || 'Team'}</small></span></div><Pill value={['CHECKED_IN','ON_BREAK'].includes(person.current_state) ? person.current_state : person.status || person.current_state || 'NOT_CHECKED_IN'} /></button>)}</div></State>
       <div className="sa-team-footer"><span>{teamRows.length ? `${teamRows.length} team members` : 'Team overview'}</span><span title="Team notes are not supported by the current backend.">Team notes are not available yet</span></div>
     </section>
     </div>

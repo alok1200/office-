@@ -1,3 +1,4 @@
+import {useDataRefresh} from '../hooks/useDataRefresh';
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -12,15 +13,18 @@ export function HolidaysPage() {
   const [selectedHoliday, setSelectedHoliday] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [loadError,setLoadError]=useState('');
 
   const loadHolidays = useCallback(async () => {
+    setLoadError('');
     try {
       const res = await api.getHolidays(currentUserId);
+      if(!res.success)throw new Error(res.error || 'Could not load holidays.');
       if (res.success && res.data) {
         setHolidays(res.data);
       }
     } catch (err) {
-      console.error('Failed to load holidays:', err);
+      setLoadError(err.message || 'Could not load holidays.');
     } finally {
       setLoading(false);
     }
@@ -30,6 +34,7 @@ export function HolidaysPage() {
     loadHolidays();
   }, [loadHolidays]);
 
+  useDataRefresh(loadHolidays,['holidays']);
   const handleOpenAdd = () => {
     setSelectedHoliday(null);
     setIsModalOpen(true);
@@ -69,6 +74,7 @@ export function HolidaysPage() {
 
   return (
     <div className="space-y-6 bg-white text-black">
+      {loadError && <p role="alert" className="sa-request-error">{loadError}<button onClick={loadHolidays}>Retry holidays</button></p>}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-black text-black flex items-center gap-2">
@@ -76,7 +82,7 @@ export function HolidaysPage() {
             <span>KNOOVIQ Company Holiday Calendar</span>
           </h2>
           <p className="text-xs text-slate-600 font-medium mt-1">
-            Official company-wide declared holidays for calendar year 2026
+            Official company-wide declared holidays
           </p>
         </div>
 

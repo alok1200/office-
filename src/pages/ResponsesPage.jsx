@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { MessageSquare, RefreshCw, CheckCircle2, Clock3, XCircle, Inbox } from 'lucide-react';
+import { MessageSquare, RefreshCw, CheckCircle2, Clock3, XCircle, Inbox, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
+import { RequestFormModal } from '../components/Employee/RequestFormModal';
 
 const date = value => {
   if (!value) return '—';
@@ -15,6 +16,11 @@ export function ResponsesPage() {
   const { currentUserId } = useAuth();
   const [state, setState] = useState({ owner: null, rows: [], loading: true, error: '' });
   const [filter, setFilter] = useState('ALL');
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [cancelling, setCancelling] = useState(null);
+  const cancelBusy = useRef(false), owner = useRef(currentUserId);
+  owner.current = currentUserId;
   const request = useRef(null), version = useRef(0);
   const refresh = useCallback(async (silent = false) => {
     const sequence = ++version.current;
@@ -38,22 +44,45 @@ export function ResponsesPage() {
     document.addEventListener('visibilitychange', update);
     return () => { ++version.current; request.current?.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', update); };
   }, [refresh]);
+  const cancel = async id => {
+    if (cancelBusy.current) return;
+    const actor = currentUserId;
+    cancelBusy.current = true; setCancelling(id); setNotice('');
+    try {
+      const response = await api.cancelMyRequest(actor, id);
+      if (owner.current !== actor) return;
+      if (!response.success) throw new Error(response.error || 'Could not cancel this request.');
+      setNotice('Request cancelled. Its reserved allowance has been released.'); await refresh();
+    } catch (error) { if (owner.current === actor) setState(old => ({ ...old, error: error.message })); }
+    finally { cancelBusy.current = false; if (owner.current === actor) setCancelling(null); }
+  };
   const rows = state.owner === currentUserId ? state.rows : [];
   const loading = state.owner !== currentUserId || state.loading;
   const filtered = rows.filter(row => filter === 'ALL' || row.status === filter);
   const summaries = [{ status: 'APPROVED', title: 'Approved', icon: CheckCircle2 }, { status: 'REJECTED', title: 'Rejected', icon: XCircle }, { status: 'PENDING', title: 'Awaiting response', icon: Clock3 }];
   return <div className="space-y-6">
-    <header className="inbox-heading"><div><h1><MessageSquare size={23} />Responses</h1><p>All updates and review comments on your own requests.</p></div><button type="button" className="ui-icon-button" onClick={() => refresh()} aria-label="Refresh responses" disabled={loading}><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button></header>
+    <header className="inbox-heading"><div><h1><MessageSquare size={23} />Responses</h1><p>Submit leave, WFH, official work, holiday or attendance regularization requests and track all responses here.</p></div><div className="flex items-center gap-2"><button type="button" className="ui-button-primary" onClick={() => setRequestOpen(true)}><Plus size={16} />New request</button><button type="button" className="ui-icon-button" onClick={() => refresh()} aria-label="Refresh responses" disabled={loading}><RefreshCw size={18} className={loading ? 'animate-spin' : ''} /></button></div></header>
+    {notice && <p role="status" className="sa-request-notice">{notice}</p>}
     <div className="response-summary">{summaries.map(({ status, title, icon: Icon }) => <div key={status}><span className="inbox-category-icon"><Icon size={21} /></span><div><p>{title}</p><strong>{state.owner === currentUserId ? rows.filter(row => row.status === status).length : '—'}</strong></div></div>)}</div>
     <div className="inbox-toolbar" role="group" aria-label="Filter responses">{[['ALL', 'All updates'], ['APPROVED', 'Approved'], ['REJECTED', 'Rejected'], ['PENDING', 'Awaiting response'], ['CANCELLED', 'Cancelled']].map(([value, text]) => <button key={value} type="button" aria-pressed={filter === value} onClick={() => setFilter(value)}>{text}</button>)}</div>
     {state.owner === currentUserId && state.error && <p role="alert" className="sa-info">{state.error}<button type="button" className="sa-text-button" onClick={() => refresh()}>Retry</button></p>}
     <section className="response-table" aria-label="Your request responses" aria-busy={loading}>
       {loading ? <p role="status" className="sa-empty">Loading your responses…</p> : !filtered.length ? <div className="inbox-empty"><Inbox size={32} /><h2>{rows.length ? 'No updates in this category' : 'No requests yet'}</h2><p>{rows.length ? 'Choose another filter to see your request updates.' : 'Responses will appear here after you submit a request.'}</p></div> : <table><thead><tr><th scope="col">Request</th><th scope="col">Requested dates</th><th scope="col">Status</th><th scope="col">Response</th></tr></thead><tbody>{filtered.map(row => <tr key={row.id}>
-        <td><strong>{label(row.metadata?.category || row.request_type)}</strong><small>Request #{row.id} · Sent {date(row.submission_date)}</small><p>{row.reason}</p></td>
+        <td><strong>{row.metadata?.label || label(row.metadata?.category || row.request_type)}</strong><small>Request #{row.id} · Sent {date(row.submission_date)}</small><p>{row.reason}</p></td>
         <td className="sa-nowrap">{date(row.start_date)}{row.end_date !== row.start_date && <><br />to {date(row.end_date)}</>}</td>
-        <td><StatusBadge status={row.status} /></td>
+        <td><StatusBadge status={row.status} />{row.status === 'PENDING' && <button type="button" className="sa-text-button" disabled={cancelling !== null} onClick={() => cancel(row.id)}>{cancelling === row.id ? 'Cancelling…' : 'Cancel request'}</button>}</td>
         <td><p>{row.decision_remarks || (row.status === 'PENDING' ? 'Awaiting review. Your response will appear here.' : row.status === 'CANCELLED' ? 'This request was cancelled.' : 'No review comment was provided.')}</p>{row.decision_date && <small>Reviewed {date(row.decision_date)}</small>}</td>
       </tr>)}</tbody></table>}
     </section>
+    <RequestFormModal
+      isOpen={requestOpen}
+      defaultType="LEAVE"
+      onClose={() => setRequestOpen(false)}
+      onSuccess={(msg) => {
+        setNotice(msg || 'Request submitted for Super Admin approval.');
+        refresh();
+        setTimeout(() => setNotice(''), 5000);
+      }}
+    />
   </div>;
 }

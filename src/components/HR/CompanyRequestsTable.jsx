@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import {useDataRefresh} from '../../hooks/useDataRefresh';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { StatusBadge } from '../Common/StatusBadge';
@@ -9,6 +10,8 @@ export function CompanyRequestsTable() {
   const { currentUserId } = useAuth();
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error,setError]=useState('');
+  const sequence=useRef(0);
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [selectedType, setSelectedType] = useState('ALL');
   const [selectedDept, setSelectedDept] = useState('ALL');
@@ -16,8 +19,9 @@ export function CompanyRequestsTable() {
   const [sortOrder, setSortOrder] = useState('DESC');
   const [inspectedReq, setInspectedReq] = useState(null);
 
-  const fetchRequests = async () => {
-    setLoading(true);
+  const fetchRequests = async (silent=false) => {
+    const ticket=++sequence.current;
+    if(silent!==true){setLoading(true);setRequests([]);}setError('');
     try {
       const res = await api.getCompanyRequests(currentUserId, {
         status: selectedStatus,
@@ -26,20 +30,25 @@ export function CompanyRequestsTable() {
         search: searchQuery,
         sortBy: sortOrder
       });
+      if(ticket!==sequence.current)return;
+      if(!res.success)throw new Error(res.error || 'Could not load company requests.');
       if (res.success && res.data) {
         setRequests(res.data);
+        setInspectedReq(old=>old?res.data.find(row=>row.id===old.id)||null:null);
       }
     } catch (err) {
-      console.error('Failed to load company requests:', err);
+      if(ticket===sequence.current)setError(err.message || 'Could not load company requests.');
     } finally {
-      setLoading(false);
+      if(ticket===sequence.current)setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchRequests();
+    return ()=>{++sequence.current;};
   }, [currentUserId, selectedStatus, selectedType, selectedDept, sortOrder]);
 
+  useDataRefresh(()=>fetchRequests(true),['requests','attendance','employees']);
   const toggleSort = () => {
     setSortOrder(prev => (prev === 'DESC' ? 'ASC' : 'DESC'));
   };
@@ -66,7 +75,7 @@ export function CompanyRequestsTable() {
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending (Awaiting Super Admin)</option>
             <option value="APPROVED">Approved</option>
-            <option value="REJECTED">Rejected</option>
+            <option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option>
           </select>
 
           {/* Type Filter */}
@@ -127,7 +136,7 @@ export function CompanyRequestsTable() {
         <div className="flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-blue-600 shrink-0" />
           <span>
-            <strong>Decision Policy:</strong> HR Admin cannot approve or reject employee requests. Decision authority is reserved for Super Admin in the next phase.
+            <strong>Decision Policy:</strong> HR Admin cannot approve or reject employee requests. Decision authority is reserved for Super Admin.
           </span>
         </div>
         <span className="hidden sm:inline-block text-[10px] font-black uppercase tracking-wider text-black">
@@ -135,6 +144,7 @@ export function CompanyRequestsTable() {
         </span>
       </div>
 
+      {error && <p role="alert" className="sa-request-error">{error} <button type="button" onClick={fetchRequests}>Retry</button></p>}
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-xs">

@@ -1,3 +1,4 @@
+import {notificationDestination} from '../services/notificationDestination';
 import React, { useState } from 'react';
 import { useNotifications } from '../context/NotificationsContext';
 import { useAuth } from '../context/AuthContext';
@@ -10,7 +11,7 @@ const timestamp = value => {
 };
 export function NotificationsPage({ setTab }) {
   const { notifications, unreadCount, loading, error, refresh, markAsRead } = useNotifications();
-  const { isHR, isSuperAdmin } = useAuth();
+  const { role } = useAuth();
   const [actionError, setActionError] = useState('');
   const [marking, setMarking] = useState(null);
   const [filter, setFilter] = useState('ALL');
@@ -28,9 +29,10 @@ export function NotificationsPage({ setTab }) {
     <section className="notification-list" aria-label="Notification inbox" aria-busy={loading}>
       {loading ? <p role="status" className="sa-empty">Loading notifications…</p> : !shown.length ? <div className="inbox-empty"><Inbox size={32} /><h2>{filter === 'UNREAD' ? 'You’re all caught up' : 'No notifications yet'}</h2><p>{filter === 'UNREAD' ? 'You have no unread notifications.' : 'New updates will appear here automatically.'}</p></div> : shown.map(item => {
         const { icon: Icon, label } = categories[item.category] || categories.ANNOUNCEMENT;
+        const destination=notificationDestination(item,role);
         return <article key={item.id} className={`notification-item ${item.is_read ? '' : 'is-unread'}`}>
           <span className="inbox-category-icon"><Icon size={21} /></span>
-          <div className="notification-content"><div className="notification-meta"><span>{label}</span><time dateTime={item.created_at}>{timestamp(item.created_at)}</time>{!item.is_read && <strong className="notification-unread-label">Unread</strong>}</div><h2>{item.title}</h2><p>{item.message}</p>{['REQUEST','CORRECTION'].includes(item.category) && setTab && <button type="button" className="sa-text-button mt-2" onClick={() => setTab(item.category === 'CORRECTION' ? 'tickets' : !isHR && !isSuperAdmin ? 'responses' : 'my-requests')}>{item.category === 'CORRECTION' ? 'View attendance tickets' : !isHR && !isSuperAdmin ? 'View my responses' : 'View my requests'}<ArrowRight size={15} /></button>}</div>
+          <div className="notification-content"><div className="notification-meta"><span>{label}</span><time dateTime={item.created_at}>{timestamp(item.created_at)}</time>{!item.is_read && <strong className="notification-unread-label">Unread</strong>}</div><h2>{item.title}</h2><p>{item.message}</p>{destination && setTab && <button type="button" className="sa-text-button mt-2" onClick={()=>setTab(destination.tab)}>{destination.label}<ArrowRight size={15} /></button>}</div>
           {!item.is_read ? <button type="button" className="notification-read-button" onClick={() => handleMarkAsRead(item.id)} disabled={marking !== null} aria-label={`Mark as read: ${item.title}`}><Check size={15} />{marking === item.id ? 'Saving…' : 'Mark read'}</button> : <span className="notification-read-status"><Check size={14} />Read</span>}
         </article>;
       })}

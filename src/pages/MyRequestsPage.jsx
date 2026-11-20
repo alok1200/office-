@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
@@ -12,27 +12,34 @@ export function MyRequestsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState('ALL');
   const [bannerMessage, setBannerMessage] = useState(null);
+  const [error, setError] = useState('');
+  const [cancelling, setCancelling] = useState(null);
 
-  // Super Admin does not have personal requests UI
-  if (isSuperAdmin) { return null; }
+  const sequence = useRef(0), cancelBusy = useRef(false), owner = useRef(currentUserId);
+  owner.current = currentUserId;
 
   const fetchMyRequests = async () => {
-    setLoading(true);
+    const ticket = ++sequence.current;
+    setLoading(true); setError('');
     try {
       const res = await api.getMyRequests(currentUserId);
+      if (ticket !== sequence.current || owner.current !== currentUserId) return;
+      if (!res.success) throw new Error(res.error || 'Could not load your requests.');
       if (res.success && res.data) {
         setRequests(res.data);
       }
     } catch (err) {
-      console.error('Failed to load my requests:', err);
+      if (ticket === sequence.current && owner.current === currentUserId) setError(err.message || 'Could not load your requests.');
     } finally {
-      setLoading(false);
+      if (ticket === sequence.current && owner.current === currentUserId) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchMyRequests();
-  }, [currentUserId]);
+    setRequests([]); setIsModalOpen(false); setBannerMessage(null);
+    if (!isSuperAdmin) fetchMyRequests();
+    return () => { ++sequence.current; };
+  }, [currentUserId, isSuperAdmin]);
 
   const handleSuccess = (msg) => {
     setBannerMessage(msg || 'Request submitted successfully.');
@@ -40,11 +47,20 @@ export function MyRequestsPage() {
     setTimeout(() => setBannerMessage(null), 5000);
   };
 
+  const cancel = async id => {
+    if (cancelBusy.current) return;
+    const actor = currentUserId; cancelBusy.current = true;
+    setCancelling(id); setError('');
+    try { const response = await api.cancelMyRequest(currentUserId, id); if (owner.current !== actor) return; if (!response.success) throw new Error(response.error || 'Could not cancel request.'); setBannerMessage('Request cancelled. Reserved allowance released.'); await fetchMyRequests(); }
+    catch (error) { if (owner.current === actor) setError(error.message); }
+    finally { cancelBusy.current = false; if (owner.current === actor) setCancelling(null); }
+  };
   const filtered = requests.filter(r => {
     if (filterStatus === 'ALL') return true;
     return r.status === filterStatus;
   });
 
+  if (isSuperAdmin) return null;
   return (
     <div className="space-y-6 bg-white text-black">
       {/* Header */}
@@ -70,6 +86,7 @@ export function MyRequestsPage() {
         </button>
       </div>
 
+      {error && <p role="alert" className="sa-request-error">{error}</p>}
       {bannerMessage && (
         <div className="p-4 rounded-xl bg-white border border-blue-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs font-bold">
           <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
@@ -80,7 +97,7 @@ export function MyRequestsPage() {
       {/* Filter Tabs */}
       <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1">
         <div className="flex items-center gap-2">
-          {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
+          {['ALL', 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED'].map((st) => (
             <button
               key={st}
               onClick={() => setFilterStatus(st)}
@@ -120,7 +137,7 @@ export function MyRequestsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-2.5">
                     <span className="px-2.5 py-1 rounded-lg text-xs font-black bg-white text-black border border-slate-300 shadow-2xs">
-                      {req.request_type}
+                      {req.metadata?.label || req.request_type}
                     </span>
                     <span className="text-xs font-black text-black">
                       {req.start_date === req.end_date ? req.start_date : `${req.start_date} → ${req.end_date}`}
@@ -131,6 +148,7 @@ export function MyRequestsPage() {
                       Submitted {new Date(req.submission_date).toLocaleDateString()}
                     </span>
                     <StatusBadge status={req.status} />
+                    {req.status === 'PENDING' && <button type="button" className="sa-text-button" disabled={cancelling !== null} onClick={() => cancel(req.id)}>{cancelling === req.id ? 'Cancelling…' : 'Cancel request'}</button>}
                   </div>
                 </div>
 

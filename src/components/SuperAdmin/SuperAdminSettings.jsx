@@ -1,9 +1,11 @@
+import {useDataRefresh} from '../../hooks/useDataRefresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Clock3, CalendarDays, Loader2, MapPin, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
 import { captureOfficeLocation } from './captureOfficeLocation';
+import { HRAdminForm } from './HRAdminForm';
 
 const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['shifts', 'Shifts', Clock3], ['holidays', 'Holidays', CalendarDays]];
 
@@ -94,9 +96,10 @@ function OfficeForm({ office, data, onClose, onSaved }) {
     </form></section></div>;
 }
 
-export function SuperAdminSettings() {
+export function SuperAdminSettings({ initialTab = 'offices' } = {}) {
   const { currentUserId } = useAuth();
-  const [tab, setTab] = useState('offices');
+  const [tab, setTab] = useState(initialTab);
+  const [creatingHR, setCreatingHR] = useState(false);
   const [resource, setResource] = useState({ loading: true, data: null, error: '' });
   const [secondary, setSecondary] = useState({ loading: false, data: null, error: '' });
   const [version, setVersion] = useState(0);
@@ -124,8 +127,9 @@ export function SuperAdminSettings() {
     catch (error) { setError(error.message || 'Could not remove office.'); }
     finally { setBusy(false); }
   };
+  useDataRefresh(()=>{refresh();setVersion(v=>v+1);},['offices','employees','holidays']);
   const data = resource.data;
-  return <div className="sa-admin-console"><h1>Admin console</h1><p className="sa-admin-subtitle">Manage office details and view saved settings.</p>
+  return <div className="sa-admin-console"><h1>Admin console</h1><p className="sa-admin-subtitle">Manage HR Admin accounts, office details and saved settings.</p>
     <div className="sa-admin-tabs" role="tablist" aria-label="Admin sections">{tabs.map(([id, name, Icon]) => <button type="button" key={id} id={`sa-tab-${id}`} role="tab" aria-selected={tab === id} aria-controls="sa-admin-panel" onClick={() => { setTab(id); setError(''); }}><Icon size={19} />{name}</button>)}</div>
     <section id="sa-admin-panel" role="tabpanel" aria-labelledby={`sa-tab-${tab}`}>
       {notice && <p role="status" className="sa-request-notice">{notice}</p>}{error && <p role="alert" className="sa-request-error">{error}</p>}
@@ -134,12 +138,13 @@ export function SuperAdminSettings() {
         {removing && <div className="sa-cancel-confirm" role="group" aria-label="Confirm office removal"><p>Remove {removing.name}? Its configuration will be archived.</p><div><button onClick={remove} disabled={busy}>{busy ? 'Removing…' : 'Remove office'}</button><button onClick={() => setRemoving(null)} disabled={busy}>Keep office</button></div></div>}
         {!data.offices.length ? <div className="sa-requests-empty">No offices configured. Add your first office to get started.</div> : <div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Coordinates</th><th>Radius</th><th>Timezone</th><th>Office IPs</th><th>Users</th><th>Actions</th></tr></thead><tbody>{data.offices.map(office => <tr key={office.id}><td><strong>{office.name}</strong>{office.is_primary && <span className="sa-office-primary">Primary</span>}{office.address && <small>{office.address}</small>}</td><td className="sa-office-coordinates">{Number(office.latitude).toFixed(5)}, {Number(office.longitude).toFixed(5)}</td><td>{office.radius_m} m</td><td className="sa-admin-muted">{office.timezone}</td><td><div className="sa-office-ip-list">{office.office_ips.length ? office.office_ips.map(ip => <code key={ip}>{ip}</code>) : <span className="sa-admin-muted">Not registered</span>}</div>{office.network_matches && <span className="sa-office-primary">Current network ✓</span>}</td><td>{office.users_count}{office.inherited_users_count > 0 && <small>{office.inherited_users_count} default</small>}</td><td><div className="sa-office-actions"><button aria-label={`Edit ${office.name}`} onClick={() => { setError(''); setEditor({ office }); }}><Pencil size={18} /></button><button className="sa-office-delete" aria-label={`Remove ${office.name}`} onClick={() => { setError(''); setRemoving(office); }} disabled={busy}><Trash2 size={18} /></button></div></td></tr>)}</tbody></table></div>}
 </>}
-      {tab === 'users' && <><div className="sa-admin-section-header"><div><h2>Users</h2><p>Saved office assignments are shown below.</p></div></div><div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Employee ID</th><th>Role</th><th>Office</th></tr></thead><tbody>{data.users.map(user => <tr key={user.id}><td>{user.name}</td><td>{user.code}</td><td>{user.role.replaceAll('_', ' ')}</td><td>{data.offices.find(o => o.id === user.office_id)?.name || data.offices.find(o => o.is_primary)?.name || 'Unassigned'}{!user.office_id && <small>Default office</small>}</td></tr>)}</tbody></table></div></>}
+      {tab === 'users' && <><div className="sa-admin-section-header"><div><h2>Users</h2><p>Create HR Admin accounts and view saved office assignments.</p></div><button type="button" className="sa-request-primary" onClick={() => { setNotice(''); setCreatingHR(true); }}><Plus size={20} />Create HR Admin</button></div><div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Employee ID</th><th>Login email</th><th>Role</th><th>Office</th></tr></thead><tbody>{data.users.map(user => <tr key={user.id}><td>{user.name}</td><td>{user.code}</td><td>{user.email || '—'}</td><td>{user.role.replaceAll('_', ' ')}</td><td>{data.offices.find(o => o.id === user.office_id)?.name || data.offices.find(o => o.is_primary)?.name || 'Unassigned'}{!user.office_id && <small>Default office</small>}</td></tr>)}</tbody></table></div></>}
       {tab === 'shifts' && <section className="sa-card"><h2>Shifts</h2><p className="sa-admin-subtitle">Shift configuration is not available in the current attendance service.</p></section>}
       {tab === 'holidays' && <><div className="sa-admin-section-header"><h2>Holidays</h2><button className="sa-request-refresh" aria-label="Refresh holidays" onClick={() => setVersion(v => v + 1)}><RefreshCw size={16} /></button></div>{secondary.loading ? <p className="sa-requests-empty" role="status">Loading…</p> : secondary.error ? <p className="sa-request-error" role="alert">{secondary.error} <button onClick={() => setVersion(v => v + 1)}>Retry</button></p> : <div className="sa-admin-table"><table><thead><tr><th>Date</th><th>Holiday</th><th>Description</th></tr></thead><tbody>{secondary.data?.map(holiday => <tr key={holiday.id}><td>{String(holiday.holiday_date).slice(0, 10)}</td><td>{holiday.name}</td><td>{holiday.description || '—'}</td></tr>)}</tbody></table>{!secondary.data?.length && <p className="sa-requests-empty">No holidays configured.</p>}</div>}</>}
 
       </>}
     </section>
+    {creatingHR && <HRAdminForm onClose={() => setCreatingHR(false)} onSaved={message => { setCreatingHR(false); setNotice(message); refresh(); }} />}
     {editor && data && <OfficeForm office={editor.office} data={data} onClose={() => setEditor(null)} onSaved={message => { setEditor(null); setNotice(message); refresh(); setVersion(v => v + 1); }} />}
   </div>;
 }

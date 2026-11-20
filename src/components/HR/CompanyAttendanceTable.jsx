@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import {useDataRefresh} from '../../hooks/useDataRefresh';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { StatusBadge } from '../Common/StatusBadge';
@@ -9,14 +10,17 @@ export function CompanyAttendanceTable() {
   const { currentUserId } = useAuth();
   const [attendanceList, setAttendanceList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [targetDate, setTargetDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [error,setError]=useState('');
+  const sequence=useRef(0);
+  const [targetDate, setTargetDate] = useState(() => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectedRecord, setInspectedRecord] = useState(null);
 
-  const fetchAttendance = async () => {
-    setLoading(true);
+  const fetchAttendance = async (silent=false) => {
+    const ticket=++sequence.current;
+    if(silent!==true){setLoading(true);setAttendanceList([]);}setError('');
     try {
       const res = await api.getCompanyAttendance(currentUserId, {
         date: targetDate,
@@ -24,20 +28,25 @@ export function CompanyAttendanceTable() {
         status: selectedStatus,
         search: searchQuery
       });
+      if(ticket!==sequence.current)return;
+      if(!res.success)throw new Error(res.error || 'Could not load company attendance.');
       if (res.success && res.data) {
         setAttendanceList(res.data);
+        setInspectedRecord(old=>old?res.data.find(row=>row.employee_id===old.employee_id)||null:null);
       }
     } catch (err) {
-      console.error('Failed to load company attendance:', err);
+      if(ticket===sequence.current)setError(err.message || 'Could not load company attendance.');
     } finally {
-      setLoading(false);
+      if(ticket===sequence.current)setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAttendance();
+    return ()=>{++sequence.current;};
   }, [currentUserId, targetDate, selectedDept, selectedStatus]);
 
+  useDataRefresh(()=>fetchAttendance(true),['attendance','requests','employees','holidays']);
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchAttendance();
@@ -45,7 +54,7 @@ export function CompanyAttendanceTable() {
 
   const formatTime = (timeStr) => {
     if (!timeStr) return '--:--';
-    return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' });
   };
 
   const formatDuration = (mins) => {
@@ -101,7 +110,7 @@ export function CompanyAttendanceTable() {
             <option value="PRESENT">Present</option>
             <option value="HALF_DAY">Half Day</option>
             <option value="LEAVE">Leave</option>
-            <option value="ABSENT">Absent</option>
+            <option value="ABSENT">Absent</option><option value="NOT_CHECKED_IN">Not checked in</option><option value="WFH">WFH</option><option value="OFFICIAL_WORK_OUTSIDE">Official work outside</option><option value="HOLIDAY">Holiday</option><option value="FUTURE">Future</option><option value="WEEKLY_OFF">Weekly off</option>
           </select>
 
           {/* Search Form */}
@@ -126,6 +135,7 @@ export function CompanyAttendanceTable() {
         </div>
       </div>
 
+      {error && <p role="alert" className="sa-request-error">{error} <button type="button" onClick={fetchAttendance}>Retry</button></p>}
       {/* Table */}
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
         <table className="w-full text-left text-xs">
@@ -137,6 +147,7 @@ export function CompanyAttendanceTable() {
               <th className="px-4 py-3.5">Check-In</th>
               <th className="px-4 py-3.5">Check-Out</th>
               <th className="px-4 py-3.5">Work Time</th>
+              <th className="px-4 py-3.5">Breaks</th>
               <th className="px-4 py-3.5">Break Time</th>
               <th className="px-4 py-3.5 text-right">Inspect</th>
             </tr>
@@ -144,19 +155,22 @@ export function CompanyAttendanceTable() {
           <tbody className="divide-y divide-slate-100 bg-white">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-slate-500 font-medium">
+                <td colSpan="9" className="px-4 py-8 text-center text-slate-500 font-medium">
                   Loading attendance records...
                 </td>
               </tr>
             ) : attendanceList.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-slate-500 font-medium">
+                <td colSpan="9" className="px-4 py-8 text-center text-slate-500 font-medium">
                   No attendance records matching your criteria.
                 </td>
               </tr>
             ) : (
-              attendanceList.map((row) => (
-                <tr key={`${row.employee_id}-${row.work_date}`} className="hover:bg-blue-50/30 transition-colors">
+              attendanceList.map((row) => {
+                const breakCount = Array.isArray(row.breaks) ? row.breaks.length : 0;
+                const onBreak = row.current_state === 'ON_BREAK' || (Array.isArray(row.breaks) && row.breaks.some(b => !b.break_end));
+                return (
+                <tr key={`${row.emp_code || row.employee_id}-${row.work_date || targetDate}`} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-4 py-3.5">
                     <div className="font-black text-black">{row.first_name} {row.last_name}</div>
                     <div className="text-[11px] text-slate-500 font-mono font-bold">{row.emp_code}</div>
@@ -169,6 +183,18 @@ export function CompanyAttendanceTable() {
                   <td className="px-4 py-3.5 font-mono font-bold text-black">{formatTime(row.check_out)}</td>
                   <td className="px-4 py-3.5 font-mono font-black text-black">
                     {formatDuration(row.total_work_minutes)}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-black text-black">
+                        {breakCount} {breakCount === 1 ? 'break' : 'breaks'}
+                      </span>
+                      {onBreak && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                          Active
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3.5 font-mono font-bold text-slate-700">
                     {formatDuration(row.total_break_minutes)}
@@ -184,7 +210,8 @@ export function CompanyAttendanceTable() {
                     </button>
                   </td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
@@ -225,8 +252,10 @@ export function CompanyAttendanceTable() {
                 <p className="text-sm font-black text-black font-mono">{formatDuration(inspectedRecord.total_work_minutes)}</p>
               </div>
               <div className="p-3 bg-white rounded-xl border border-blue-200">
-                <span className="text-[11px] text-blue-600 font-bold">Break Duration</span>
-                <p className="text-sm font-black text-black font-mono">{formatDuration(inspectedRecord.total_break_minutes)}</p>
+                <span className="text-[11px] text-blue-600 font-bold">Breaks Taken / Duration</span>
+                <p className="text-sm font-black text-black font-mono">
+                  {Array.isArray(inspectedRecord.breaks) ? inspectedRecord.breaks.length : 0} ({formatDuration(inspectedRecord.total_break_minutes)})
+                </p>
               </div>
             </div>
 

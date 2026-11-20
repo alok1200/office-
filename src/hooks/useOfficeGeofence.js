@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { evaluateLocation } from '../services/geofenceStatus';
 import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
+import {useDataRefresh} from './useDataRefresh';
 
 export function useOfficeGeofence(enabled) {
   const { currentUserId } = useAuth();
@@ -28,6 +29,7 @@ export function useOfficeGeofence(enabled) {
     } catch (error) { if (mounted.current && user === activeUser.current) setOfficeState({ loading: false, office: null, error: error.message }); }
     return null;
   }, [currentUserId]);
+  useDataRefresh(()=>loadOffice(),['offices','employees'],{enabled});
   useEffect(() => {
     mounted.current = true; setSample(null); setTracking(false); setError('');
     setOfficeState({ loading: true, office: null, error: '' });

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import {useDataRefresh} from '../../hooks/useDataRefresh';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
@@ -9,9 +10,12 @@ import { AddEmployeeModal, AssetFields, blankAsset, assetTypeLabel } from './Add
 const day = value => value ? String(value).slice(0, 10) : '—';
 
 export function EmployeeDirectory({ openAdd = false }) {
-  const { currentUserId, isHR } = useAuth();
+  const { currentUserId, isHR, isSuperAdmin } = useAuth();
+  const canManageAccount = (emp) => (isHR && emp.role === 'EMPLOYEE') || (isSuperAdmin && emp.role === 'HR_ADMIN');
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [directoryError,setDirectoryError]=useState('');
+  const directoryVersion=useRef(0);
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [inspectedEmp, setInspectedEmp] = useState(null);
@@ -86,26 +90,31 @@ export function EmployeeDirectory({ openAdd = false }) {
     }
   };
 
-  const fetchEmployees = async () => {
-    setLoading(true);
+  const fetchEmployees = async (silent=false) => {
+    const ticket=++directoryVersion.current;
+    if(silent!==true)setLoading(true);setDirectoryError('');
     try {
       const res = await api.getCompanyEmployees(currentUserId, {
         department: selectedDept,
         search: searchQuery
       });
+      if(ticket!==directoryVersion.current)return;
+      if(!res.success)throw new Error(res.error || 'Could not load employees.');
       if (res.success && res.data) {
         setEmployees(res.data);
       }
     } catch (err) {
-      console.error('Failed to load employee directory:', err);
+      if(ticket===directoryVersion.current)setDirectoryError(err.message || 'Could not load employees.');
     } finally {
-      setLoading(false);
+      if(ticket===directoryVersion.current)setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchEmployees();
+    return()=>{++directoryVersion.current;};
   }, [currentUserId, selectedDept]);
+  useDataRefresh(()=>fetchEmployees(true),['employees','offices']);
 
   const loadAssets = async id => {
     setAssets(old => ({ ...old, loading: true, error: '' }));
@@ -159,6 +168,7 @@ export function EmployeeDirectory({ openAdd = false }) {
 
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-5">
+      {directoryError && <p role="alert" className="sa-request-error">{directoryError}<button onClick={()=>fetchEmployees()}>Retry employees</button></p>}
       {/* Header & Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
@@ -271,7 +281,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                     <span>Inspect History</span>
                   </button>
                 </div>
-                {isHR && emp.role === 'EMPLOYEE' && (
+                {canManageAccount(emp) && (
                   <div className="grid grid-cols-2 gap-2 pt-1">
                     <button
                       type="button"
@@ -285,7 +295,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                     <button
                       type="button"
                       onClick={() => { setDeleteError(''); setDeleteEmp(emp); }}
-                      title="Delete employee account"
+                      title={emp.role === 'HR_ADMIN' ? 'Delete HR Admin account' : 'Delete employee account'}
                       className="px-2.5 py-1.5 rounded-xl border border-rose-200 hover:bg-rose-50 text-rose-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
                     >
                       <Trash2 className="w-3.5 h-3.5 shrink-0" />
@@ -375,7 +385,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                             {Math.floor(att.total_work_minutes / 60)}h {att.total_work_minutes % 60}m
                           </td>
                           <td className="px-3.5 py-2.5 font-mono text-slate-700 font-bold">
-                            {att.total_break_minutes}m
+                            {Array.isArray(att.breaks) ? att.breaks.length : 0} ({att.total_break_minutes || 0}m)
                           </td>
                         </tr>
                       ))}
@@ -431,7 +441,7 @@ export function EmployeeDirectory({ openAdd = false }) {
       )}
       {isHR && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
 
-      {isHR && resetEmp && (
+      {(isHR || isSuperAdmin) && resetEmp && (
         <Modal
           isOpen={true}
           onClose={() => { if (!resetBusy) setResetEmp(null); }}
@@ -509,16 +519,16 @@ export function EmployeeDirectory({ openAdd = false }) {
         </Modal>
       )}
 
-      {isHR && deleteEmp && (
+      {(isHR || isSuperAdmin) && deleteEmp && (
         <Modal
           isOpen={true}
           onClose={() => { if (!deleteBusy) setDeleteEmp(null); }}
-          title={`Delete Employee: ${deleteEmp.first_name} ${deleteEmp.last_name}`}
+          title={`Delete ${deleteEmp.role === 'HR_ADMIN' ? 'HR Admin' : 'Employee'}: ${deleteEmp.first_name} ${deleteEmp.last_name}`}
           maxWidth="max-w-md"
         >
           <div className="space-y-4 bg-white text-black">
             <p className="text-xs text-slate-600">
-              Remove <strong className="text-black">{deleteEmp.first_name} {deleteEmp.last_name}</strong> ({deleteEmp.employee_id} · {deleteEmp.email}) from the company? They will be signed out immediately and will no longer be able to log in. Historical attendance and audit records are preserved.
+              Remove <strong className="text-black">{deleteEmp.first_name} {deleteEmp.last_name}</strong> ({deleteEmp.employee_id} · {deleteEmp.email})? Their login email and password will be cleared immediately, active sessions will be signed out, and they will no longer be able to access the system.
             </p>
             {deleteError && (
               <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2">
@@ -542,7 +552,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-2xs disabled:opacity-60"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{deleteBusy ? 'Deleting…' : 'Delete Employee'}</span>
+                <span>{deleteBusy ? 'Deleting…' : deleteEmp.role === 'HR_ADMIN' ? 'Delete HR Admin' : 'Delete Employee'}</span>
               </button>
             </div>
           </div>

@@ -53,6 +53,7 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'tickets', label: 'HR-Requests', icon: Ticket },
     { id: 'hr-employees', label: 'Team', icon: Users },
+    { id: 'admin', label: 'HR Admin accounts', icon: UserPlus },
     { id: 'admin-approvals', label: 'Approvals', icon: Shield },
     { id: 'hr-attendance', label: 'Reports', icon: Clock },
     { id: 'office-location', label: 'Office Location', icon: MapPin },

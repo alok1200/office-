@@ -1,3 +1,4 @@
+import {useDataRefresh} from '../hooks/useDataRefresh';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
 import { useAuth } from './AuthContext';
@@ -29,6 +30,7 @@ export function NotificationsProvider({ children }) {
     document.addEventListener('visibilitychange', visibleRefresh);
     return () => { ++version.current; request.current?.abort(); clearInterval(timer); document.removeEventListener('visibilitychange', visibleRefresh); };
   }, [currentUserId, refresh]);
+  useDataRefresh(()=>refresh({silent:true}),['requests','attendance','holidays','employees'],{intervalMs:0});
   const markAsRead = async id => {
     const res = await api.markNotificationRead(currentUserId, id);
     if (!res.success) throw new Error(res.error || 'Could not mark notification as read.');
