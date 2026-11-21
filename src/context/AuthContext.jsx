@@ -6,16 +6,32 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     const token = localStorage.getItem('knooviq_auth_token');
-    if (token) {
-      api.logout().catch(() => {});
+    if (!token) {
+      setLoading(false);
+      return;
     }
-    localStorage.removeItem('knooviq_auth_token');
-    localStorage.removeItem('knooviq_user_id');
-    if (typeof window !== 'undefined' && window.location.pathname !== '/') {
-      window.history.replaceState(null, '', '/');
-    }
-    setCurrentUser(null);
-    setLoading(false);
+    let cancelled = false;
+    api.getCurrentUser()
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success && res.user) {
+          setCurrentUser(res.user);
+        } else {
+          localStorage.removeItem('knooviq_auth_token');
+          localStorage.removeItem('knooviq_user_id');
+          setCurrentUser(null);
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        localStorage.removeItem('knooviq_auth_token');
+        localStorage.removeItem('knooviq_user_id');
+        setCurrentUser(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
   }, []);
   const login = async (identifier, password) => {
     try {
