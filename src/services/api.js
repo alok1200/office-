@@ -1,9 +1,9 @@
-import {announceDataChange} from './dataChanges';
+import { announceDataChange } from './dataChanges';
 const API_BASE = '/api';
 
-async function appFetch(path,options={}) {
-  const response=await fetch(path,options);
-  if(response.ok)announceDataChange(path,options.method||'GET');
+async function appFetch(path, options = {}) {
+  const response = await fetch(path, options);
+  if (response.ok) announceDataChange(path, options.method || 'GET');
   return response;
 }
 
@@ -182,9 +182,9 @@ export const api = {
     return res.blob();
   },
 
-  getAttendanceCorrections: async (signal) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, {headers:getHeaders(),signal})).json(),
-  raiseAttendanceCorrection: async (payload) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, {method:'POST',headers:getHeaders(),body:JSON.stringify(payload)})).json(),
-  getAttendanceCorrectionAudit: async (id) => (await appFetch(`${API_BASE}/requests/attendance-corrections/${id}/audit`, {headers:getHeaders()})).json(),
+  getAttendanceCorrections: async (signal) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, { headers: getHeaders(), signal })).json(),
+  raiseAttendanceCorrection: async (payload) => (await appFetch(`${API_BASE}/requests/attendance-corrections`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) })).json(),
+  getAttendanceCorrectionAudit: async (id) => (await appFetch(`${API_BASE}/requests/attendance-corrections/${id}/audit`, { headers: getHeaders() })).json(),
 
   // Requests
   getMyRequestOptions: async (userId, year) => (await appFetch(`${API_BASE}/requests/options?year=${year}`, { headers: getHeaders(userId) })).json(),
