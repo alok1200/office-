@@ -331,56 +331,6 @@ export const api = {
     const res = await appFetch(`${API_BASE}/payroll/periods/${id}`, { headers: getHeaders() });
     return res.json();
   },
-  submitPayrollPeriod: async (id, remarks = '') => {
-    const res = await appFetch(`${API_BASE}/payroll/periods/${id}/submit`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ remarks }) });
-    return res.json();
-  },
-  approvePayrollPeriod: async (id, remarks = '') => {
-    const res = await appFetch(`${API_BASE}/payroll/periods/${id}/approve`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ remarks }) });
-    return res.json();
-  },
-  rejectPayrollPeriod: async (id, remarks) => {
-    const res = await appFetch(`${API_BASE}/payroll/periods/${id}/reject`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ remarks }) });
-    return res.json();
-  },
-  authorizePayrollPayments: async (id, payload) => {
-    const res = await appFetch(`${API_BASE}/payroll/periods/${id}/authorize-payments`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
-    return res.json();
-  },
-  listSalaryPayments: async (filters = {}) => {
-    const params = new URLSearchParams(filters).toString();
-    const res = await appFetch(`${API_BASE}/payroll/payments${params ? `?${params}` : ''}`, { headers: getHeaders() });
-    return res.json();
-  },
-  getPaymentTransactions: async (id) => {
-    const res = await appFetch(`${API_BASE}/payroll/payments/${id}/transactions`, { headers: getHeaders() });
-    return res.json();
-  },
-  retrySalaryPayment: async (id) => {
-    const res = await appFetch(`${API_BASE}/payroll/payments/${id}/retry`, { method: 'POST', headers: getHeaders() });
-    return res.json();
-  },
-  getPaymentProviderSettings: async () => {
-    const res = await appFetch(`${API_BASE}/payroll/provider-settings`, { headers: getHeaders() });
-    return res.json();
-  },
-  updatePaymentProviderSettings: async (payload) => {
-    const res = await appFetch(`${API_BASE}/payroll/provider-settings`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) });
-    return res.json();
-  },
-  listPayslips: async (filters = {}) => {
-    const params = new URLSearchParams(filters).toString();
-    const res = await appFetch(`${API_BASE}/payroll/payslips${params ? `?${params}` : ''}`, { headers: getHeaders() });
-    return res.json();
-  },
-  downloadPayslipPdf: async (recordId) => {
-    const res = await appFetch(`${API_BASE}/payroll/payslips/${recordId}/pdf`, { headers: getHeaders() });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Could not download payslip.');
-    }
-    return res.blob();
-  },
   exportPayrollReport: async (filters, format) => {
     const res = await appFetch(`${API_BASE}/payroll/reports/export?${new URLSearchParams({ ...filters, format })}`, { headers: getHeaders() });
     if (!res.ok) {

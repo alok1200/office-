@@ -81,13 +81,18 @@ export function AttendanceCalendar() {
 
   const getDayCardStyles = (dayItem) => {
     const isToday = dayItem.date === todayStr;
-    const style = getCalendarStatus(dayItem.status);
+    const isSunday = dayItem.dayOfWeek === 0 || dayItem.status === 'WEEKLY_OFF';
     const todayRing = isToday ? 'ring-2 ring-blue-600 ring-offset-2' : '';
+    if (isSunday) return `${todayRing} border border-slate-200 text-black bg-white hover:bg-slate-50`;
+    const style = getCalendarStatus(dayItem.status);
     if (style?.card) return `${todayRing} ${style.card}`;
     return `${todayRing} border border-slate-200 text-black bg-white hover:bg-slate-50`;
   };
 
-  const getStatusDotColor = status => getCalendarStatus(status)?.dot;
+  const getStatusDotColor = (dayItem) => {
+    if (dayItem.dayOfWeek === 0 || dayItem.status === 'WEEKLY_OFF') return null;
+    return getCalendarStatus(dayItem.status)?.dot;
+  };
 
   const days = calendarData?.days || [];
   const firstDayOfWeek = days.length > 0 ? days[0].dayOfWeek : 0;
@@ -168,7 +173,8 @@ export function AttendanceCalendar() {
 
           {days.map((item) => {
             const isToday = item.date === todayStr;
-            const style = getCalendarStatus(item.status);
+            const isSunday = item.dayOfWeek === 0 || item.status === 'WEEKLY_OFF';
+            const style = isSunday ? null : getCalendarStatus(item.status);
             const solid = Boolean(style?.solid);
             return (
               <div
@@ -184,7 +190,7 @@ export function AttendanceCalendar() {
                     {item.decision?.status === 'REJECTED' && (
                       <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-red-600 text-white">Rejected</span>
                     )}
-                    {getStatusDotColor(item.status) && <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item.status)}`} />}
+                    {getStatusDotColor(item) && <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item)}`} />}
                   </div>
                 </div>
 

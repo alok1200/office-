@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Calculator, RefreshCw, Send, Play, AlertCircle, CheckCircle2, Download, Search } from 'lucide-react';
+import { Calculator, RefreshCw, Play, AlertCircle, CheckCircle2, Download, Search } from 'lucide-react';
 import { api } from '../../services/api';
 import { MONTHS, currentIndiaYearMonth, formatINR, payrollStatusTone, periodLabel } from './payrollFormat';
 
@@ -37,24 +37,6 @@ export function MonthlySalaryCalculationPage() {
     try {
       const res = await api.generateMonthlyPayroll({ year, month });
       if (!res.success) throw new Error(res.error || 'Could not generate payroll.');
-      setNotice(res.message);
-      await load();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setBusy('');
-    }
-  };
-
-  const handleSubmit = async () => {
-    const periodId = preview?.existing_period?.id;
-    if (!periodId) return;
-    setBusy('submit');
-    setError('');
-    setNotice('');
-    try {
-      const res = await api.submitPayrollPeriod(periodId, 'Submitted monthly payroll for Super Admin approval.');
-      if (!res.success) throw new Error(res.error || 'Could not submit payroll.');
       setNotice(res.message);
       await load();
     } catch (err) {
@@ -173,12 +155,6 @@ export function MonthlySalaryCalculationPage() {
             <button type="button" disabled={Boolean(busy) || !preview?.can_process} onClick={handleGenerate} className="ui-button-primary">
               <Play className="w-4 h-4" />
               <span>{busy === 'generate' ? 'Generating…' : existing ? 'Regenerate Draft' : 'Generate Payroll'}</span>
-            </button>
-          )}
-          {existing && ['DRAFT', 'REJECTED'].includes(existing.status) && (
-            <button type="button" disabled={Boolean(busy)} onClick={handleSubmit} className="px-4 py-2.5 rounded-xl border-2 border-blue-600 bg-white hover:bg-blue-50 text-blue-700 text-xs font-black inline-flex items-center gap-1.5">
-              <Send className="w-3.5 h-3.5" />
-              <span>{busy === 'submit' ? 'Submitting…' : 'Submit to Super Admin'}</span>
             </button>
           )}
           {existing && (

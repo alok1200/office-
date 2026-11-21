@@ -23,9 +23,6 @@ import { PayrollDashboardPage } from './pages/payroll/PayrollDashboardPage';
 import { EmployeeSalaryPage } from './pages/payroll/EmployeeSalaryPage';
 import { MonthlySalaryCalculationPage } from './pages/payroll/MonthlySalaryCalculationPage';
 import { SalaryHistoryPage } from './pages/payroll/SalaryHistoryPage';
-import { PayrollApprovalPage } from './pages/payroll/PayrollApprovalPage';
-import { SalaryPaymentsPage } from './pages/payroll/SalaryPaymentsPage';
-import { PayslipsPage } from './pages/payroll/PayslipsPage';
 import { CompanyLogo } from './components/Common/CompanyLogo';
 import { Loader2 } from 'lucide-react';
 
@@ -82,8 +79,8 @@ function AppContent() {
   }
 
   const renderPage = () => {
-    const companyTabs = ['hr-employees', 'hr-attendance', 'hr-company-requests', 'payroll-salaries', 'payroll-calculation'];
-    const adminTabs = ['admin', 'office-location', 'admin-approvals', 'payroll-approval', 'payroll-payments'];
+    const companyTabs = ['hr-employees', 'hr-attendance', 'hr-company-requests', 'payroll-dashboard', 'payroll-salaries', 'payroll-calculation', 'payroll-history'];
+    const adminTabs = ['admin', 'office-location', 'admin-approvals'];
     const ticketTab = currentTab === 'tickets' && !isHR && !isSuperAdmin;
     if (ticketTab || (currentTab === 'hr-add-employee' && !isHR) ||
         (companyTabs.includes(currentTab) && !isHR && !isSuperAdmin) ||
@@ -129,12 +126,6 @@ function AppContent() {
         return <MonthlySalaryCalculationPage />;
       case 'payroll-history':
         return <SalaryHistoryPage />;
-      case 'payroll-approval':
-        return <PayrollApprovalPage />;
-      case 'payroll-payments':
-        return <SalaryPaymentsPage />;
-      case 'payroll-payslips':
-        return <PayslipsPage />;
       default:
         return <DashboardPage setTab={setCurrentTab} />;
     }

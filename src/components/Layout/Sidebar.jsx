@@ -22,8 +22,6 @@ import {
   IndianRupee,
   Calculator,
   History,
-  ShieldCheck,
-  CreditCard,
 } from 'lucide-react';
 
 export function Sidebar({ currentTab, setTab }) {
@@ -36,10 +34,6 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'holidays', label: 'Holidays', icon: CalendarDays },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'profile', label: 'My Profile', icon: User },
-    { section: 'Payroll' },
-    { id: 'payroll-dashboard', label: 'Payroll Dashboard', icon: Wallet },
-    { id: 'payroll-history', label: 'Salary History', icon: History },
-    { id: 'payroll-payslips', label: 'Payslips', icon: FileText },
   ];
 
   const hrNavItems = [
@@ -54,7 +48,6 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'payroll-salaries', label: 'Employee Salary', icon: IndianRupee },
     { id: 'payroll-calculation', label: 'Monthly Salary Calculation', icon: Calculator },
     { id: 'payroll-history', label: 'Salary History', icon: History },
-    { id: 'payroll-payslips', label: 'Payslips', icon: FileText },
     { section: 'My Workday' },
     { id: 'calendar', label: 'My Calendar', icon: Calendar },
     { id: 'tickets', label: 'Tickets', icon: Ticket, badge: 'HR' },
@@ -78,9 +71,6 @@ export function Sidebar({ currentTab, setTab }) {
     { id: 'payroll-salaries', label: 'Employee Salary', icon: IndianRupee },
     { id: 'payroll-calculation', label: 'Monthly Salary Calculation', icon: Calculator },
     { id: 'payroll-history', label: 'Salary History', icon: History },
-    { id: 'payroll-approval', label: 'Payroll Approval', icon: ShieldCheck },
-    { id: 'payroll-payments', label: 'Salary Payments', icon: CreditCard },
-    { id: 'payroll-payslips', label: 'Payslips', icon: FileText },
   ];
 
   const navItems = isSuperAdmin

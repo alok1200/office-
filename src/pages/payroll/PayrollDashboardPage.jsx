@@ -6,11 +6,7 @@ import {
   CalendarX,
   TrendingDown,
   IndianRupee,
-  Clock,
-  CheckCircle2,
-  XCircle,
   RefreshCw,
-  Download,
   ArrowRight,
   AlertCircle,
 } from 'lucide-react';
@@ -19,7 +15,7 @@ import { api } from '../../services/api';
 import { MONTHS, currentIndiaYearMonth, formatDate, formatINR, payrollStatusTone, periodLabel } from './payrollFormat';
 
 export function PayrollDashboardPage({ setTab }) {
-  const { isEmployee, isSuperAdmin } = useAuth();
+  const { isEmployee } = useAuth();
   const initial = currentIndiaYearMonth();
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);
@@ -43,24 +39,8 @@ export function PayrollDashboardPage({ setTab }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const downloadPdf = async (rec) => {
-    try {
-      const blob = await api.downloadPayslipPdf(rec.id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `payslip-${rec.employee_code}-${rec.year}-${String(rec.month).padStart(2, '0')}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (err) {
-      setError(err.message || 'Could not download payslip.');
-    }
-  };
-
   if (isEmployee) {
-    const latest = data?.latest_payslips?.[0] || null;
+    const latest = data?.latest_summary || data?.latest_payslips?.[0] || null;
     return (
       <div className="space-y-6 bg-white text-black">
         <div className="bg-white rounded-2xl p-6 border border-blue-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -70,12 +50,12 @@ export function PayrollDashboardPage({ setTab }) {
               <span>My Salary &amp; Payroll Overview</span>
             </h1>
             <p className="text-xs text-slate-600 mt-1">
-              Fixed 30-day monthly salary breakdown, deductions, and downloadable payslips.
+              Fixed 30-day monthly salary breakdown, deductions, and salary revision history.
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => setTab('payroll-payslips')} className="ui-button-primary">
-              <span>All Payslips</span>
+            <button type="button" onClick={() => setTab('payroll-history')} className="ui-button-primary">
+              <span>Salary History</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <button type="button" onClick={load} className="ui-icon-button" aria-label="Refresh">
@@ -120,12 +100,7 @@ export function PayrollDashboardPage({ setTab }) {
             <p className="text-2xl font-black text-blue-950 mt-1">
               {loading ? '—' : latest ? formatINR(latest.final_payable_paise) : '—'}
             </p>
-            {latest && (
-              <button type="button" onClick={() => downloadPdf(latest)} className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline">
-                <Download className="w-3.5 h-3.5" />
-                <span>Download Payslip PDF</span>
-              </button>
-            )}
+            <p className="text-[11px] text-slate-500 mt-1">{latest ? periodLabel(latest.year, latest.month) : 'Monthly Salary − Absent Deduction'}</p>
           </div>
         </div>
       </div>
@@ -139,10 +114,6 @@ export function PayrollDashboardPage({ setTab }) {
     { label: 'Total Absent Days', value: loading ? '—' : data?.total_absent_days ?? 0, icon: CalendarX, tone: 'text-rose-700' },
     { label: 'Total Salary Deductions', value: loading ? '—' : formatINR(data?.total_salary_deductions_paise), icon: TrendingDown, tone: 'text-rose-700' },
     { label: 'Total Payable Salary', value: loading ? '—' : formatINR(data?.total_payable_salary_paise), icon: Wallet, tone: 'text-blue-700' },
-    { label: 'Pending Payroll', value: loading ? '—' : data?.pending_payroll ?? 0, icon: Clock, tone: 'text-amber-700' },
-    { label: 'Approved Payroll', value: loading ? '—' : data?.approved_payroll ?? 0, icon: CheckCircle2, tone: 'text-emerald-700' },
-    { label: 'Successful Payments', value: loading ? '—' : data?.successful_payments ?? 0, icon: CheckCircle2, tone: 'text-emerald-700' },
-    { label: 'Failed Payments', value: loading ? '—' : data?.failed_payments ?? 0, icon: XCircle, tone: 'text-rose-700' },
   ];
 
   return (
@@ -152,9 +123,14 @@ export function PayrollDashboardPage({ setTab }) {
           <h1 className="text-xl font-black text-blue-950 flex items-center gap-2">
             <Wallet className="w-5 h-5 text-blue-600" />
             <span>Payroll Dashboard</span>
+            {!loading && data?.is_live_preview && (
+              <span className="px-2 py-0.5 rounded-full border border-blue-200 bg-blue-50 text-[10px] font-bold text-blue-700">
+                Live Preview
+              </span>
+            )}
           </h1>
           <p className="text-xs text-slate-600 mt-1">
-            Monthly payroll summary, fixed 30-day attendance deductions, and payment status overview.
+            Monthly payroll summary and fixed 30-day attendance-based salary deductions for {periodLabel(year, month)}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -168,11 +144,6 @@ export function PayrollDashboardPage({ setTab }) {
             <span>Monthly Calculation</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-          {isSuperAdmin && (
-            <button type="button" onClick={() => setTab('payroll-approval')} className="px-3.5 py-2.5 rounded-xl border border-blue-600 text-blue-700 text-xs font-bold hover:bg-blue-50">
-              Payroll Approval
-            </button>
-          )}
           <button type="button" onClick={load} className="ui-icon-button" aria-label="Refresh payroll dashboard">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -186,7 +157,7 @@ export function PayrollDashboardPage({ setTab }) {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {kpis.map(({ label, value, icon: Icon, tone }) => (
           <div key={label} className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-1.5">
             <div className="flex items-center justify-between gap-2">
