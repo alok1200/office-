@@ -1,8 +1,10 @@
 import { announceDataChange } from './dataChanges';
+
+const backendUrl = (import.meta.env?.VITE_BACKEND_URL || '').trim().replace(/\/+$/, '');
 const API_BASE = '/api';
 
 async function appFetch(path, options = {}) {
-  const response = await fetch(path, options);
+  const response = await fetch(`${backendUrl}${path}`, options);
   if (response.ok) announceDataChange(path, options.method || 'GET');
   return response;
 }
