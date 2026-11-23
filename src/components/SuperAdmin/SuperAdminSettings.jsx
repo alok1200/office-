@@ -2,6 +2,7 @@ import {useDataRefresh} from '../../hooks/useDataRefresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Building2, Clock3, CalendarDays, Loader2, MapPin, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { ATTENDANCE_RADIUS_M } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
 import { captureOfficeLocation } from './captureOfficeLocation';
@@ -11,7 +12,7 @@ const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['sh
 
 function OfficeForm({ office, data, onClose, onSaved }) {
   const { currentUserId } = useAuth();
-  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: 50, max_accuracy_m: Math.min(office?.max_accuracy_m ?? 50, 50), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
+  const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: ATTENDANCE_RADIUS_M, max_accuracy_m: Math.min(office?.max_accuracy_m ?? 50, 50), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -88,8 +89,8 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       <button type="button" className="sa-location-button" onClick={() => setShowPinMap(value => !value)} aria-expanded={showPinMap} aria-controls="office-pin-map" disabled={saving || locating}><MapPin size={15} />{showPinMap ? 'Hide office pin map' : 'Adjust office pin on map'}</button>
       {showPinMap && <div id="office-pin-map"><GeofenceMapPanel office={form} onOfficePick={pickOfficePoint} disabled={saving || locating} /></div>}
       {captureNotice && <p className="sa-office-capture-notice" role="status">{captureNotice}</p>}
-      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={50} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={50} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
-      <p id="office-radius-help" className="sa-office-form-help">The attendance boundary is fixed at 50 m. Attendance GPS accuracy is configured separately, up to ±50 m. The reported position must still be within 50 m; accuracy does not widen this boundary. Use accurate GPS, select your building on the map, or enter verified coordinates; then press Save office. Employee GPS never moves the saved office.</p>
+      <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={ATTENDANCE_RADIUS_M} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={50} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
+      <p id="office-radius-help" className="sa-office-form-help">The attendance boundary is fixed at {ATTENDANCE_RADIUS_M} m. Attendance GPS accuracy is configured separately, up to ±50 m. The reported position must still be within {ATTENDANCE_RADIUS_M} m; accuracy does not widen this boundary. Use accurate GPS, select your building on the map, or enter verified coordinates; then press Save office. Employee GPS never moves the saved office.</p>
       <label htmlFor="sa-office-zone">Timezone</label><input id="sa-office-zone" list="sa-office-timezones" value={form.timezone} onChange={e => change('timezone', e.target.value)} required disabled={saving} /><datalist id="sa-office-timezones">{['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Europe/London', 'America/New_York'].map(zone => <option key={zone} value={zone} />)}</datalist>
       <label htmlFor="sa-office-address">Address</label><input id="sa-office-address" value={form.address} onChange={e => change('address', e.target.value)} maxLength={500} disabled={saving} />
       <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={close} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving || locating}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save office'}</button></div>

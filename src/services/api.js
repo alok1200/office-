@@ -123,7 +123,7 @@ export const api = {
     return res.json();
   },
   getSuperAdminDashboard: async (userId) => {
-    const res = await appFetch(`${API_BASE}/super-admin/dashboard`, { headers: getHeaders(userId) });
+    const res = await appFetch(`${API_BASE}/super-admin/dashboard?office=primary`, { headers: getHeaders(userId) });
     return res.json();
   },
   getOfficeLocation: async () => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
+import { ATTENDANCE_RADIUS_M } from '../../services/geofenceStatus';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
 import { StatusBadge } from '../Common/StatusBadge';
 import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
@@ -63,7 +64,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
           <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
-            Your location is verified when you press an attendance button. You must be within 50 m of the saved office.
+            Your location is verified when you press an attendance button. You must be within {ATTENDANCE_RADIUS_M} m of the saved office.
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -52,13 +52,14 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
     };
     let kickedFallback = false;
     const triggerFallback = () => {
-      if (settled || best || kickedFallback || typeof geolocation.getCurrentPosition !== 'function') return;
+      if (settled || kickedFallback || typeof geolocation.getCurrentPosition !== 'function') return;
+      if (best && best.accuracy <= maximumAccuracy && canFinishEarly(best)) return;
       kickedFallback = true;
       try {
-        // Active one-shot query nudges browsers (especially Safari/Chrome indoors) when watchPosition stalls.
+        // Ask for a fresh fix if the watch has not produced a usable reading.
         geolocation.getCurrentPosition(success, err => {
           if (err?.code === 1) failed(err);
-        }, { enableHighAccuracy: true, maximumAge: 10000, timeout: Math.max(4000, timeoutMs - 3000) });
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: Math.max(4000, timeoutMs - 3000) });
       } catch { /* watchPosition remains active */ }
     };
     const failed = error => {
@@ -74,7 +75,7 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         watchId = geolocation.watchPosition(success, failed, options);
         // Also handles synchronous test/browser callbacks before the ID is assigned.
         if (settled && watchId !== undefined) geolocation.clearWatch?.(watchId);
-        else if (!best && typeof geolocation.getCurrentPosition === 'function') {
+        else if (typeof geolocation.getCurrentPosition === 'function') {
           kickTimer = setTimeout(triggerFallback, Math.min(3500, Math.floor(timeoutMs / 3)));
         }
       } else geolocation.getCurrentPosition(success, failed, options);

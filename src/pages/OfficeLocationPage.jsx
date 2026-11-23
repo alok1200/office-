@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { ATTENDANCE_RADIUS_M } from '../services/geofenceStatus';
 import { api } from '../services/api';
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -38,7 +39,7 @@ export function OfficeLocationPage() {
         setLocation({
           latitude,
           longitude,
-          radius_m: 15,
+          radius_m: ATTENDANCE_RADIUS_M,
           max_accuracy_m: 20,
           address: '',
         });
@@ -106,7 +107,7 @@ export function OfficeLocationPage() {
                 <Marker position={[location.latitude, location.longitude]} />
                 <Circle
                   center={[location.latitude, location.longitude]}
-                  radius={location.radius_m}
+                  radius={ATTENDANCE_RADIUS_M}
                   pathOptions={{ color: 'blue', fillOpacity: 0.1 }}
                 />
               </MapContainer>

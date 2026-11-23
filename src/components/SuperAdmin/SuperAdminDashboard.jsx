@@ -1,5 +1,5 @@
 import {useDataRefresh} from '../../hooks/useDataRefresh';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, FileText, Info, Loader2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { CompanyLogo } from '../Common/CompanyLogo';
 import { LeaveAllowances } from './LeaveAllowances';
@@ -12,21 +12,27 @@ const time = value => value ? new Date(value).toLocaleTimeString('en-IN', { hour
 const date = value => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', timeZone: 'Asia/Kolkata' }) : '—';
 const duration = value => `${Math.floor((value || 0) / 60)}h ${(value || 0) % 60}m`;
 
-function useResource(fetcher, userId) {
+function useResource(fetcher, userId, keepData = false) {
   const [state, setState] = useState({ loading: true, data: null, error: null });
+  const requestId = useRef(0);
   const refresh = useCallback(async () => {
-    setState(old => ({ ...old, loading: true, error: null }));
+    const ticket = ++requestId.current;
+    setState(old => ({ ...old, loading: !keepData || old.data === null, error: null }));
     try {
       const response = await fetcher(userId);
       if (!response.success) throw new Error(response.error || 'Could not load this section.');
-      setState({ loading: false, data: response.data, error: null });
+      if (ticket === requestId.current) setState({ loading: false, data: response.data, error: null });
     } catch (error) {
-      setState({ loading: false, data: null, error: error.message || 'Connection unavailable.' });
+      if (ticket === requestId.current) setState(old => ({ loading: false, data: keepData ? old.data : null, error: error.message || 'Connection unavailable.' }));
     }
-  }, [fetcher, userId]);
+  }, [fetcher, userId, keepData]);
+  const updateData = update => {
+    requestId.current += 1;
+    setState(old => ({ loading: false, error: null, data: update(old.data) }));
+  };
   useEffect(() => { refresh(); }, [refresh]);
   useDataRefresh(refresh,['attendance','requests','holidays','employees','offices']);
-  return { ...state, refresh };
+  return { ...state, refresh, updateData };
 }
 
 function State({ resource, children, empty = false, emptyText = 'No records to show yet.' }) {
@@ -52,7 +58,7 @@ const getRecent = async userId => {
 
 export function SuperAdminDashboard({ setTab }) {
   const { currentUserId, currentUser } = useAuth();
-  const config = useResource(api.getSuperAdminDashboard, currentUserId);
+  const config = useResource(api.getSuperAdminDashboard, currentUserId, true);
   const team = useResource(api.getCompanyAttendance, currentUserId);
   const requests = useResource(api.getMyRequests, currentUserId);
 // const recent = useResource(getRecent, currentUserId); // Super Admin does not track personal attendance
