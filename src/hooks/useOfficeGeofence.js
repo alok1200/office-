@@ -110,7 +110,13 @@ export function useOfficeGeofence(enabled) {
     setLiveAccuracy(null);
     let location;
     try {
-      location = await readCurrentLocation({ maximumAccuracy: maxAcc, signal: controller.signal, timeoutMs: 15000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
+      location = await readCurrentLocation({
+        maximumAccuracy: maxAcc,
+        signal: controller.signal,
+        timeoutMs: 15000,
+        canFinishEarly: sample => evaluateLocation(office, sample).eligible,
+        onProgress: sample => { if (mounted.current) setLiveAccuracy(Math.round(sample.accuracy)); }
+      });
     } finally { if (mounted.current) setLiveAccuracy(null); }
     if (!mounted.current || actor !== activeUser.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled because the signed-in account changed.');
     const evaluation = evaluateLocation(office, location);
