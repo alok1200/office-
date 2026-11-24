@@ -4,7 +4,7 @@ import { gpsQuality, formatGpsDistance } from '../../services/gpsPresentation';
 import { ATTENDANCE_RADIUS_M, evaluateLocation } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
-import { captureOfficeLocation } from './captureOfficeLocation';
+import { captureOfficeLocation, DIRECT_SAVE_ACCURACY_M, OFFICE_CAPTURE_ACCURACY_M } from './captureOfficeLocation';
 import { Info, Loader2, MapPin, Navigation, RefreshCw, Settings2, ShieldCheck, Map as MapIcon } from 'lucide-react';
 
 export function GeofenceCard({ resource, setTab }) {
@@ -15,6 +15,7 @@ export function GeofenceCard({ resource, setTab }) {
   const locationRequest = useRef(null);
   const [locating, setLocating] = useState(false);
   const [officeAction, setOfficeAction] = useState(null);
+  const [officeCandidate, setOfficeCandidate] = useState(null);
   const officeBusy = officeAction !== null;
   const [officeNotice, setOfficeNotice] = useState('');
   const officeOperation = useRef(false);
@@ -25,7 +26,7 @@ export function GeofenceCard({ resource, setTab }) {
   useEffect(() => {
     activeRequest.current += 1;
     locationRequest.current?.abort();
-    setGps(null); setGpsError(''); setGpsProgress(''); setLocating(false);
+    setGps(null); setGpsError(''); setGpsProgress(''); setLocating(false); setOfficeCandidate(null);
     return () => { activeRequest.current += 1; locationRequest.current?.abort(); };
   }, [officeKey]);
 
@@ -34,7 +35,7 @@ export function GeofenceCard({ resource, setTab }) {
     const requestId = ++activeRequest.current;
     locationRequest.current?.abort();
     const controller = new AbortController(); locationRequest.current = controller;
-    setLocating(true); setGps(null); setGpsError(''); setGpsProgress('Finding a fresh GPS position…');
+    setLocating(true); setGps(null); setGpsError(''); setGpsProgress('Finding a fresh GPS position…'); setOfficeCandidate(null);
     const update = sample => {
       if (requestId !== activeRequest.current) return;
       const { latitude, longitude, accuracy } = sample;
@@ -52,10 +53,10 @@ export function GeofenceCard({ resource, setTab }) {
     finally { if (requestId === activeRequest.current) { setLocating(false); setGpsProgress(''); } }
   };
 
-  const updateCompanyLocation = async () => {
+  const updateCompanyLocation = async (reviewedCoordinates) => {
     if (!office || officeOperation.current || locating) return;
     officeOperation.current = true;
-    setOfficeAction('capturing');
+    setOfficeAction(reviewedCoordinates ? 'saving' : 'capturing');
     setOfficeNotice('');
     setGpsError('');
     const ticket = activeRequest.current;
@@ -63,10 +64,20 @@ export function GeofenceCard({ resource, setTab }) {
     locationRequest.current?.abort();
     locationRequest.current = controller;
     try {
-      const result = await captureOfficeLocation({ includeNetwork: false, signal: controller.signal });
-      if (ticket !== activeRequest.current || controller.signal.aborted) return;
-      if (!result.coordinates) throw new Error(result.errors.join(' ') || 'Could not read your location.');
-      const { latitude, longitude, accuracy } = result.coordinates;
+      let coordinates = reviewedCoordinates;
+      if (!coordinates) {
+        setOfficeCandidate(null);
+        const result = await captureOfficeLocation({ includeNetwork: false, signal: controller.signal });
+        if (ticket !== activeRequest.current || controller.signal.aborted) return;
+        if (!result.coordinates) throw new Error(result.errors.join(' ') || 'Could not read your location.');
+        coordinates = result.coordinates;
+        if (coordinates.accuracy > DIRECT_SAVE_ACCURACY_M) {
+          setOfficeCandidate(coordinates);
+          setShowMap(true);
+          return;
+        }
+      }
+      const { latitude, longitude, accuracy } = coordinates;
       setOfficeAction('saving');
       const response = await api.updateOfficeLocation({
         office_id: office.id,
@@ -75,6 +86,7 @@ export function GeofenceCard({ resource, setTab }) {
       });
       if (ticket !== activeRequest.current) return;
       if (!response.success || !response.data) throw new Error(response.error || 'Could not confirm the saved company location.');
+      setOfficeCandidate(null);
       resource.updateData(data => ({ ...data, office: response.data }));
       setOfficeNotice(`Saved ${response.data.name} at ${latitude}, ${longitude} using a ±${Math.round(accuracy)} m GPS reading.`);
       void resource.refresh();
@@ -104,7 +116,21 @@ export function GeofenceCard({ resource, setTab }) {
       </div>
       <div className="sa-geofence-legend"><span><i className="sa-legend-office" aria-hidden="true" />Office</span><span><i className="sa-legend-employee" aria-hidden="true" />Your location</span></div>
       <div className="sa-mini-stats"><div><span>{verified ? 'Distance' : 'Estimated distance'}</span><strong>{formatGpsDistance(gps?.distance)}</strong></div><div><span>Accuracy</span><strong className={lowAccuracy ? 'sa-accuracy-low' : ''}>{gps ? `±${Math.round(gps.accuracy)} m` : '—'}</strong></div><div><span>Fix quality</span><strong className="sa-gps-quality" aria-label={`Reported GPS accuracy quality: ${verified ? quality.label : 'Unverified'}`}><span className="sa-gps-bars" aria-hidden="true">{[1, 2, 3].map(level => <i key={level} className={level <= (gpsError ? 0 : quality.bars) ? 'filled' : ''} style={{ height: 4 + level * 4 }} />)}</span><small>{verified ? quality.label : gps ? 'Unverified' : 'No fix'}</small></strong></div></div>
-      {office && <><button type="button" className="sa-location-button" aria-expanded={showMap} aria-controls="company-geographic-map" onClick={() => setShowMap(value => !value)}><MapIcon size={15} />{showMap ? 'Hide geographic map' : 'View geographic map'}</button>{showMap && <div id="company-geographic-map"><GeofenceMapPanel office={office} sample={verified ? gps : null} /></div>}</>}
+      {office && <>
+        <button type="button" className="sa-location-button" aria-expanded={showMap} aria-controls="company-geographic-map" onClick={() => setShowMap(value => !value)} disabled={!!officeCandidate}><MapIcon size={15} />{showMap ? 'Hide geographic map' : 'View geographic map'}</button>
+        {showMap && <div id="company-geographic-map"><GeofenceMapPanel office={office} sample={officeCandidate || (verified ? gps : null)} sampleAccuracyLimit={officeCandidate ? OFFICE_CAPTURE_ACCURACY_M : undefined} /></div>}
+        {officeCandidate && <div className="sa-info">
+          <div>
+            <strong>Review the proposed office pin</strong>
+            <p>Check that the orange marker is on your office before saving. GPS accuracy is ±{Math.round(officeCandidate.accuracy)} m.</p>
+            <p>{officeCandidate.latitude}, {officeCandidate.longitude}</p>
+            <div className="flex flex-wrap gap-3 mt-3">
+              <button type="button" className="sa-request-primary" onClick={() => updateCompanyLocation(officeCandidate)} disabled={officeBusy || locating}>{officeAction === 'saving' ? 'Saving office location…' : 'Confirm and save office pin'}</button>
+              <button type="button" className="sa-text-button" onClick={() => setOfficeCandidate(null)} disabled={officeBusy}>Cancel</button>
+            </div>
+          </div>
+        </div>}
+      </>}
       {lowAccuracy && <div className="sa-info" role="status"><Info size={16} /><div><strong>Location not verified</strong><p>Your device reports accuracy ±{Math.round(gps.accuracy)} m; this office requires ±{office?.max_accuracy_m || 50} m or better. We cannot confirm inside or outside the {ATTENDANCE_RADIUS_M} m radius from this reading. Your orange marker appears when GPS meets the configured accuracy limit.</p><p>Enable precise location in your device settings and retry near a window or outdoors. A matching office network does not confirm your GPS position.</p></div></div>}
       <div className="sa-gps-details">
         <p><strong>Primary office location</strong><span>{office ? `${Number(office.latitude).toFixed(6)}, ${Number(office.longitude).toFixed(6)}` : 'Not configured'}</span></p>
@@ -117,11 +143,11 @@ export function GeofenceCard({ resource, setTab }) {
       <div className="sa-info"><Info size={13} /><span>{office ? <>The office location stays fixed. GPS updates only your orange marker. All attendance actions require employees to be within <strong>{ATTENDANCE_RADIUS_M} m</strong> with reported GPS accuracy within the configured ±{office.max_accuracy_m || 50} m limit. Accuracy does not increase the {ATTENDANCE_RADIUS_M} m boundary. </> : <>Set your office location to enable distance checks. </>}Location is never shared with teammates.</span></div>
       <button className="sa-location-button" onClick={locate} disabled={!office || locating || officeBusy}>{locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}{locating ? 'Checking location…' : gps ? 'Refresh my location' : 'Check my location'}</button>
       {office && <>
-        <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={updateCompanyLocation} disabled={officeBusy || locating}>
+        <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={() => updateCompanyLocation()} disabled={officeBusy || locating}>
           {officeBusy ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
           {officeAction === 'capturing' ? 'Reading office GPS…' : officeAction === 'saving' ? 'Saving office location…' : 'Save current location as office pin'}
         </button>
-        <p id="save-office-gps-help" className="sa-office-form-help">Use this while standing at {office.name}. It saves a fresh GPS reading within ±15 m accuracy and updates the pin for employees who use this office.</p>
+        <p id="save-office-gps-help" className="sa-office-form-help">Use this while standing at {office.name}. A reading of ±{DIRECT_SAVE_ACCURACY_M} m or better saves directly. Readings up to ±{OFFICE_CAPTURE_ACCURACY_M} m can be reviewed on the map before saving.</p>
       </>}
       {officeNotice && <p role="status" className="sa-info">{officeNotice}</p>}
       {(gpsError || lowAccuracy || verified && !inside) && <div className="sa-info"><div>{gpsError && <p role="alert" className="sa-error sa-gps-error">{gpsError}</p>}<strong>Improve location accuracy</strong><ol className="sa-gps-help"><li>Allow location for this site and enable precise location in your device settings.</li><li>Try a GPS-capable phone. Computer location can be less precise.</li><li>Move near a window or outdoors, then press Refresh my location.</li><li>Open the geographic map and check whether the saved office pin is on your building. Change it only if the saved office location is wrong.</li></ol></div></div>}

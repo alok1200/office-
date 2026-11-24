@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ATTENDANCE_RADIUS_M } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
-import { captureOfficeLocation } from './captureOfficeLocation';
+import { captureOfficeLocation, DIRECT_SAVE_ACCURACY_M } from './captureOfficeLocation';
 import { HRAdminForm } from './HRAdminForm';
 
 const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['shifts', 'Shifts', Clock3], ['holidays', 'Holidays', CalendarDays]];
@@ -49,12 +49,12 @@ function OfficeForm({ office, data, onClose, onSaved }) {
         signal: controller.signal,
       });
       if (!mounted.current) return;
-      if (result.coordinates?.accuracy > 15) { setError(`GPS accuracy is ±${Math.round(result.coordinates.accuracy)} m. Move near a window or outdoors and retry; ±15 m or better is required.`); return; }
-      if (result.coordinates) setForm(old => ({ ...old, latitude: result.coordinates.latitude, longitude: result.coordinates.longitude }));
-      setCaptureNotice([
-        result.coordinates ? `Current location captured (GPS accuracy ±${Math.round(result.coordinates.accuracy)} m).` : '',
-        result.coordinates ? 'Review the fields, then press Save office.' : '',
-      ].filter(Boolean).join(' '));
+      if (result.coordinates) {
+        const { latitude, longitude, accuracy } = result.coordinates;
+        setForm(old => ({ ...old, latitude, longitude }));
+        if (accuracy > DIRECT_SAVE_ACCURACY_M) setShowPinMap(true);
+        setCaptureNotice(`Current location captured with ±${Math.round(accuracy)} m accuracy. Check the office pin before saving.`);
+      }
       setError(result.errors.join(' '));
     } catch { if (mounted.current) setError('Could not capture your current details. Please retry.'); }
     finally { clearTimeout(timeout); capturing.current = false; captureRequest.current = null; if (mounted.current) setLocating(false); }

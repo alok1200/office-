@@ -36,12 +36,12 @@ function PickOfficePoint({ onPick }) {
   useMapEvents({ click: event => onPick({ latitude: event.latlng.lat, longitude: event.latlng.lng }) });
   return null;
 }
-export default function GeofenceMap({ office, sample, onOfficePick, disabled = false }) {
+export default function GeofenceMap({ office, sample, sampleAccuracyLimit = office?.max_accuracy_m ?? 50, onOfficePick, disabled = false }) {
   const [tileError, setTileError] = useState(false);
   const officePoint = mapPoint(office?.latitude, office?.longitude);
   const editable = typeof onOfficePick === 'function';
   const canPick = editable && !disabled;
-  const precise = gpsQuality(sample, Number(office?.max_accuracy_m ?? 50)).precise;
+  const precise = gpsQuality(sample, Number(sampleAccuracyLimit)).precise;
   const userPoint = precise ? mapPoint(sample.latitude, sample.longitude) : null;
   if (!officePoint && !editable) return <p className="sa-info">Save valid office coordinates to view the map.</p>;
   const tileEvents = { tileerror: () => setTileError(true), load: () => setTileError(false) };
