@@ -37,9 +37,9 @@ function useResource(fetcher, userId, keepData = false) {
 
 function State({ resource, children, empty = false, emptyText = 'No records to show yet.' }) {
   if (resource.loading) return <div className="sa-empty" role="status"><Loader2 size={18} className="animate-spin" /> Loading records…</div>;
-  if (resource.error) return <div className="sa-empty sa-error" role="alert"><span>{resource.error}</span><button className="sa-text-button" onClick={resource.refresh}><RefreshCw size={13} /> Retry</button></div>;
-  if (empty) return <div className="sa-empty">{emptyText}</div>;
-  return children;
+  const errorNotice = resource.error && <div className="sa-empty sa-error" role="alert"><span>{resource.error}</span><button className="sa-text-button" onClick={resource.refresh}><RefreshCw size={13} /> Retry</button></div>;
+  if (errorNotice && resource.data == null) return errorNotice;
+  return <>{errorNotice}{empty ? <div className="sa-empty">{emptyText}</div> : children}</>;
 }
 
 function Title({ icon: Icon, children, aside }) {
@@ -59,7 +59,7 @@ const getRecent = async userId => {
 export function SuperAdminDashboard({ setTab }) {
   const { currentUserId, currentUser } = useAuth();
   const config = useResource(api.getSuperAdminDashboard, currentUserId, true);
-  const team = useResource(api.getCompanyAttendance, currentUserId);
+  const team = useResource(api.getCompanyAttendance, currentUserId, true);
   const requests = useResource(api.getMyRequests, currentUserId);
 // const recent = useResource(getRecent, currentUserId); // Super Admin does not track personal attendance
   const profile = useResource(api.getMyProfile, currentUserId);

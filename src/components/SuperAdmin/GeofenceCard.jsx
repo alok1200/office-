@@ -98,7 +98,7 @@ export function GeofenceCard({ resource, setTab }) {
   const lowAccuracy = !!gps && !quality.precise;
   const verified = quality.precise && !gpsError && Number.isFinite(gps.distance);
   const inside = verified && gps.distance <= ATTENDANCE_RADIUS_M;
-  const status = !office ? 'Not configured' : lowAccuracy || gpsError ? 'Location not verified' : locating ? 'Finding precise GPS…' : !gps ? 'GPS not checked' : inside ? 'Inside zone' : 'Outside zone';
+  const status = !office ? 'Not configured' : locating ? 'Finding precise GPS…' : lowAccuracy || gpsError ? 'Location not verified' : !gps ? 'GPS not checked on this device' : inside ? 'Inside zone' : 'Outside zone';
   const statusTone = verified ? (inside ? 'green' : 'red') : 'blue';
   // The marker shows actual bearing with distance clamped to the diagram's edge.
   const markerRadius = gps ? Math.min(43, gps.distance / ATTENDANCE_RADIUS_M * 32) : 0;
@@ -110,6 +110,7 @@ export function GeofenceCard({ resource, setTab }) {
     {resource.loading ? <div className="sa-empty" role="status"><Loader2 size={18} className="animate-spin" />Loading office…</div> : (!resource.error || resource.data) && <>
       <p className="sa-description sa-office-name">{office?.name || 'No office location configured'}</p>
       <div className="sa-geofence-badges"><div className="sa-pills"><span className={`sa-pill ${statusTone}`} role="status">{status}</span>{office && <span className="sa-pill blue">Radius: {ATTENDANCE_RADIUS_M} m</span>}</div><span className={`sa-pill ${resource.data?.network?.matched ? 'sa-network-pill' : 'blue'}`}><ShieldCheck size={11} /> {resource.data?.network?.matched ? 'Office network matched · GPS separate' : 'Office network: no match'}</span><span className="sa-pill blue"><ShieldCheck size={11} /> Privacy: checked on request</span></div>
+      {office && <button type="button" className="sa-location-button" onClick={locate} disabled={locating || officeBusy}>{locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}{locating ? 'Checking location…' : gps ? 'Refresh my location' : 'Check my location'}</button>}
       <div className="sa-radar" role="img" aria-label={verified ? `${status}. Office distance ${gps.distance.toFixed(2)} metres. Schematic capped at the outer ring.` : 'Fixed office location. Your current position is not verified; no employee marker is plotted.'}>
         <div className="sa-radar-ring"><div><span className="sa-office-dot" title="Office location" /><span className="sa-office-label">Office</span></div></div>
         {verified && <span className="sa-location-dot" title="Your location" style={markerStyle} />}
@@ -141,7 +142,6 @@ export function GeofenceCard({ resource, setTab }) {
       {verified && !inside && !locating && <p className="sa-info" role="status">GPS places you {formatGpsDistance(gps.distance)} from the saved office pin. Check the geographic map before updating the pin.</p>}
       {gpsProgress && <p role="status" className="sa-info">{gpsProgress}</p>}
       <div className="sa-info"><Info size={13} /><span>{office ? <>The office location stays fixed. GPS updates only your orange marker. All attendance actions require employees to be within <strong>{ATTENDANCE_RADIUS_M} m</strong> with reported GPS accuracy within the configured ±{office.max_accuracy_m || 50} m limit. Accuracy does not increase the {ATTENDANCE_RADIUS_M} m boundary. </> : <>Set your office location to enable distance checks. </>}Location is never shared with teammates.</span></div>
-      <button className="sa-location-button" onClick={locate} disabled={!office || locating || officeBusy}>{locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}{locating ? 'Checking location…' : gps ? 'Refresh my location' : 'Check my location'}</button>
       {office && <>
         <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={() => updateCompanyLocation()} disabled={officeBusy || locating}>
           {officeBusy ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
