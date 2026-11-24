@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
-import { evaluateLocation } from '../services/geofenceStatus';
+import { attendanceAccuracyLimit, evaluateLocation } from '../services/geofenceStatus';
 import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
 import { useDataRefresh } from './useDataRefresh';
@@ -68,7 +68,7 @@ export function useOfficeGeofence(enabled) {
       let office = result.office;
 
       const reading = readCurrentLocation({
-        maximumAccuracy: 75,
+        maximumAccuracy: attendanceAccuracyLimit(office.max_accuracy_m),
         signal: controller.signal,
         timeoutMs: 25000,
         canFinishEarly: sample => evaluateLocation(office, sample).eligible,

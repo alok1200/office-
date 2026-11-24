@@ -84,7 +84,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
 
       {canRecord && (
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {geofence.office?.name && <p className="text-xs text-slate-600">Office for attendance: {geofence.office.name}</p>}
+          {geofence.office?.name && <p className="text-xs text-slate-600">{geofence.office.name} · GPS accuracy must be ±{geofence.office.max_accuracy_m} m or better</p>}
           <button
             type="button"
             className="text-xs font-bold text-blue-700 underline disabled:opacity-50"
