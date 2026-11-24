@@ -52,10 +52,13 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       if (result.coordinates) {
         const { latitude, longitude, accuracy } = result.coordinates;
         setForm(old => ({ ...old, latitude, longitude }));
-        if (accuracy > DIRECT_SAVE_ACCURACY_M) setShowPinMap(true);
-        setCaptureNotice(`Current location captured with ±${Math.round(accuracy)} m accuracy. Check the office pin before saving.`);
+        const needsMapReview = accuracy > DIRECT_SAVE_ACCURACY_M;
+        if (needsMapReview) setShowPinMap(true);
+        setCaptureNotice(`GPS accuracy is ±${Math.round(accuracy)} m. ${needsMapReview ? 'Check the blue pin on the map and move it to your office building if needed.' : 'Review the coordinates.'} Press Save office to apply the location.`);
+      } else {
+        setShowPinMap(true);
+        setError(`${result.errors.join(' ')} Select your office building on the map or enter verified coordinates.`.trim());
       }
-      setError(result.errors.join(' '));
     } catch { if (mounted.current) setError('Could not capture your current details. Please retry.'); }
     finally { clearTimeout(timeout); capturing.current = false; captureRequest.current = null; if (mounted.current) setLocating(false); }
   };

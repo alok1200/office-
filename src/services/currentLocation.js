@@ -3,7 +3,7 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
   return new Promise((resolve, reject) => {
     const failure = (message, code = 'GPS_UNAVAILABLE') => Object.assign(new Error(message), { code });
     if (secureContext === false) {
-      reject(failure('Location requires HTTPS or localhost. Open the company’s HTTPS attendance link directly in your browser. If you only have an HTTP link, ask your administrator for the HTTPS link.', 'GPS_INSECURE_CONTEXT'));
+      reject(failure('This address does not allow GPS. Open the company’s HTTPS attendance link in Safari or Chrome. If you opened an HTTP Wi-Fi address, ask your administrator for the HTTPS link.', 'GPS_INSECURE_CONTEXT'));
       return;
     }
     if (permissionsPolicy?.allowsFeature?.('geolocation') === false) {

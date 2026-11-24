@@ -1,6 +1,6 @@
 import { readCurrentLocation } from '../../services/currentLocation.js';
 export const DIRECT_SAVE_ACCURACY_M = 15;
-export const OFFICE_CAPTURE_ACCURACY_M = 40;
+export const OFFICE_CAPTURE_ACCURACY_M = 75;
 
 export async function captureOfficeLocation({ geolocation, readConnection, includeGPS = true, includeNetwork = true, signal }) {
   const location = !includeGPS ? Promise.resolve(null) : readCurrentLocation({
