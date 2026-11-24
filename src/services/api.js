@@ -140,7 +140,8 @@ export const api = {
   // Attendance
   getTodayAttendance: async (userId) => {
     const res = await appFetch(`${API_BASE}/attendance/today`, {
-      headers: getHeaders(userId)
+      headers: getHeaders(userId),
+      cache: 'no-store'
     });
     return res.json();
   },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { PunchControls } from '../components/Employee/PunchControls';
@@ -7,28 +7,39 @@ import { HRSummaryCards } from '../components/HR/HRSummaryCards';
 import { CompanyAttendanceTable } from '../components/HR/CompanyAttendanceTable';
 import { Calendar, FileText, ArrowRight } from 'lucide-react';
 import { SuperAdminDashboard } from '../components/SuperAdmin/SuperAdminDashboard';
+import { useDataRefresh } from '../hooks/useDataRefresh';
 
 export function DashboardPage({ setTab }) {
   const { currentUser, currentUserId, isHR, isSuperAdmin } = useAuth();
   const [todayData, setTodayData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const attendanceRequest = useRef(0);
+  const showPersonalAttendance = !!currentUserId && !isSuperAdmin && !isHR;
 
-  const fetchTodayData = async () => {
+  const fetchTodayData = useCallback(async () => {
+    const request = ++attendanceRequest.current;
     try {
       const res = await api.getTodayAttendance(currentUserId);
-      if (res.success && res.data) {
+      if (request === attendanceRequest.current && res.success && res.data) {
         setTodayData(res.data);
+        return res.data;
       }
     } catch (err) {
       console.error('Failed to load today attendance:', err);
     } finally {
-      setLoading(false);
+      if (request === attendanceRequest.current) setLoading(false);
     }
-  };
+    return null;
+  }, [currentUserId]);
 
   useEffect(() => {
-    if (!isSuperAdmin) fetchTodayData();
-  }, [currentUserId, isSuperAdmin]);
+    if (!showPersonalAttendance) return;
+    setTodayData(null);
+    setLoading(true);
+    void fetchTodayData();
+    return () => { attendanceRequest.current++; };
+  }, [fetchTodayData, showPersonalAttendance]);
+  useDataRefresh(fetchTodayData, ['attendance', 'requests', 'employees'], { enabled: showPersonalAttendance });
 
   return (
     <div className="space-y-6 bg-white text-black">

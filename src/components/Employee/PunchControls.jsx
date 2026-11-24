@@ -31,6 +31,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     setMessage(null);
     setError(null);
 
+    let punchSubmitted = false;
     try {
       const { message: locationMessage, ...location } = await geofence.checkLocation();
       if (action === 'CHECK_LOCATION') {
@@ -38,14 +39,19 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         return;
       }
 
+      punchSubmitted = true;
       const res = await api.recordPunch(currentUserId, action, location);
+      const latest = await onRefresh();
       if (res.success) {
         setMessage(res.message || `Successfully recorded ${action.replace('_', ' ')}`);
-        onRefresh();
       } else {
-        setError(res.message || res.error || 'Failed to record punch');
+        const failure = res.message || res.error || 'Failed to record punch';
+        setError(latest && latest.current_state !== currentState
+          ? `${failure} Your attendance status and available actions have refreshed.`
+          : failure);
       }
     } catch (err) {
+      if (punchSubmitted) await onRefresh();
       setError(err.message || 'Could not verify your location. Please retry.');
     } finally {
       setLoadingAction(null);
