@@ -70,7 +70,7 @@ export function useOfficeGeofence(enabled) {
       const reading = readCurrentLocation({
         maximumAccuracy: 75,
         signal: controller.signal,
-        timeoutMs: 15000,
+        timeoutMs: 25000,
         canFinishEarly: sample => evaluateLocation(office, sample).eligible,
         onProgress: sample => { if (isCurrent()) setProgress(sample.accuracy); }
       });

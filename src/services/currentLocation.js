@@ -11,10 +11,10 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
       return;
     }
     if (!geolocation) { reject(failure('GPS is unavailable in this browser. Enable device Location Services and use a supported browser.')); return; }
-    let settled = false, watchId, timer, graceTimer, kickTimer, best;
+    let settled = false, watchId, timer, graceTimer, kickTimer, retryTimer, best;
     const finish = (error, sample) => {
       if (settled) return;
-      settled = true; clearTimeout(timer); clearTimeout(graceTimer); clearTimeout(kickTimer);
+      settled = true; clearTimeout(timer); clearTimeout(graceTimer); clearTimeout(kickTimer); clearTimeout(retryTimer);
       if (watchId !== undefined) geolocation.clearWatch?.(watchId);
       signal?.removeEventListener('abort', aborted);
       globalThis.document?.removeEventListener('visibilitychange', visibilityChanged);
@@ -57,17 +57,23 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         }
       } else if (typeof geolocation.watchPosition !== 'function') timedOut();
     };
-    let kickedFallback = false;
-    const triggerFallback = () => {
-      if (settled || kickedFallback || typeof geolocation.getCurrentPosition !== 'function') return;
+    let fallbackAttempts = 0;
+    let fallbackPending = false;
+    const triggerFallback = (attemptLimit = 1) => {
+      if (settled || fallbackPending || fallbackAttempts >= attemptLimit || typeof geolocation.getCurrentPosition !== 'function') return;
       if (best && best.accuracy <= maximumAccuracy && canFinishEarly(best)) return;
-      kickedFallback = true;
+      fallbackAttempts++;
+      fallbackPending = true;
       try {
-        // Ask for a fresh fix if the watch has not produced a usable reading.
-        geolocation.getCurrentPosition(success, err => {
+        // A later independent fix can improve on a coarse watch result.
+        geolocation.getCurrentPosition(position => {
+          fallbackPending = false;
+          success(position);
+        }, err => {
+          fallbackPending = false;
           if (err?.code === 1) failed(err);
-        }, { enableHighAccuracy: true, maximumAge: 0, timeout: Math.max(4000, timeoutMs - 3000) });
-      } catch { /* watchPosition remains active */ }
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: Math.min(8000, timeoutMs) });
+      } catch { fallbackPending = false; }
     };
     const failed = error => {
       if (settled) return;
@@ -84,6 +90,7 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
         if (settled && watchId !== undefined) geolocation.clearWatch?.(watchId);
         else if (typeof geolocation.getCurrentPosition === 'function') {
           kickTimer = setTimeout(triggerFallback, Math.min(3500, Math.floor(timeoutMs / 3)));
+          retryTimer = setTimeout(() => triggerFallback(2), Math.min(12000, Math.floor(timeoutMs * 0.8)));
         }
       } else geolocation.getCurrentPosition(success, failed, options);
     } catch { finish(failure('Location access is blocked. Check site permissions and use HTTPS or localhost.')); }

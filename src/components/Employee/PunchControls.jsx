@@ -52,7 +52,10 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       }
     } catch (err) {
       if (punchSubmitted) await onRefresh();
-      setError(err.message || 'Could not verify your location. Please retry.');
+      const failure = err.message || 'Could not verify your location. Please retry.';
+      setError(err.code === 'LOW_ACCURACY' && action !== 'CHECK_LOCATION'
+        ? `${failure} If you miss a punch, submit an Attendance Regularization request from My Requests.`
+        : failure);
     } finally {
       setLoadingAction(null);
     }
