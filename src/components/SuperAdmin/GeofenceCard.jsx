@@ -91,7 +91,7 @@ export function GeofenceCard({ resource, setTab }) {
   const markerStyle = gps ? { left: `${50 + Math.sin(gps.bearing) * markerRadius}%`, top: `${50 - Math.cos(gps.bearing) * markerRadius}%` } : undefined;
 
   return <section className="sa-card sa-geofence" aria-labelledby="sa-geofence-title">
-    <div className="sa-card-heading"><h2 id="sa-geofence-title"><MapPin size={16} /> GPS Geofence</h2><button className="sa-icon-button" aria-label="Configure office location" title="Configure office location" onClick={() => setTab('admin')}><Settings2 size={14} /></button></div>
+    <div className="sa-card-heading"><h2 id="sa-geofence-title"><MapPin size={16} /> GPS Geofence</h2><button className="sa-icon-button" aria-label="Configure office location" title="Configure office location" onClick={() => setTab('office-location')}><Settings2 size={14} /></button></div>
     {resource.error && <div className="sa-empty sa-error" role="alert"><span>{resource.error}</span><button className="sa-text-button" onClick={resource.refresh}><RefreshCw size={13} /> Retry</button></div>}
     {resource.loading ? <div className="sa-empty" role="status"><Loader2 size={18} className="animate-spin" />Loading office…</div> : (!resource.error || resource.data) && <>
       <p className="sa-description sa-office-name">{office?.name || 'No office location configured'}</p>

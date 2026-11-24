@@ -10,5 +10,10 @@ export function evaluateLocation(office, sample) {
   const distance = 6371000 * 2 * Math.atan2(Math.sqrt(Math.min(1, Math.max(0, a))), Math.sqrt(1 - Math.min(1, Math.max(0, a))));
   if (sample.accuracy > Number(office.max_accuracy_m ?? 50)) return { eligible: false, distance, message: `GPS accuracy ±${Math.round(sample.accuracy)} m is too low. Required: ±${office.max_accuracy_m ?? 50} m or better.` };
   const inside = distance <= Number(office.radius_m);
-  return { eligible: inside, distance, message: inside ? `Inside the saved office radius (${office.radius_m} m).` : `Outside office radius: ${distance < 1000 ? distance.toFixed(2) : Math.round(distance)} m away; allowed ${office.radius_m} m.` };
+  const officeName = office.name || 'your saved office';
+  const displayedDistance = distance < 1000 ? distance.toFixed(2) : Math.round(distance);
+  const message = inside
+    ? `You are within ${office.radius_m} m of ${officeName}.`
+    : `Your GPS reading is ${displayedDistance} m from ${officeName}. Attendance requires being within ${office.radius_m} m. If you’re at the office, ask your administrator to verify your office assignment and the saved map pin.`;
+  return { eligible: inside, distance, message };
 }

@@ -3,126 +3,107 @@ import { api } from '../services/api';
 import { evaluateLocation } from '../services/geofenceStatus';
 import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
-import {useDataRefresh} from './useDataRefresh';
+import { useDataRefresh } from './useDataRefresh';
 
 export function useOfficeGeofence(enabled) {
   const { currentUserId } = useAuth();
-  const [officeState, setOfficeState] = useState({ loading: true, office: null, error: '' });
-  const [sample, setSample] = useState(null);
-  const [error, setError] = useState('');
-  const [reading, setReading] = useState(false);
-  const [tracking, setTracking] = useState(false);
-  const [liveAccuracy, setLiveAccuracy] = useState(null);
-  const [clock, setClock] = useState(Date.now());
-  const [visible, setVisible] = useState(document.visibilityState === 'visible');
+  const [officeState, setOfficeState] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const session = useRef(null);
   const locationRequest = useRef(null);
-  const sequence = useRef(0), mounted = useRef(true), activeUser = useRef(currentUserId);
-  const sampleRef = useRef(null), trackingRef = useRef(false);
-  sampleRef.current = sample; trackingRef.current = tracking;
-  activeUser.current = currentUserId;
+
   const loadOffice = useCallback(async () => {
-    const user = currentUserId;
+    const active = session.current;
+    if (!active || active.userId !== currentUserId) return null;
+    const request = ++active.officeRequest;
+
+    let result;
     try {
-      const res = await api.getOfficeLocation();
-      if (!res.success) throw new Error(res.error || 'Could not load your saved office.');
-      if (mounted.current && user === activeUser.current) { setOfficeState({ loading: false, office: res.data, error: '' }); return res.data; }
-    } catch (error) { if (mounted.current && user === activeUser.current) setOfficeState({ loading: false, office: null, error: error.message }); }
-    return null;
-  }, [currentUserId]);
-  useDataRefresh(()=>loadOffice(),['offices','employees'],{enabled});
-  useEffect(() => {
-    mounted.current = true; setSample(null); setTracking(false); setError('');
-    setOfficeState({ loading: true, office: null, error: '' });
-    if (enabled) loadOffice();
-    return () => { mounted.current = false; sequence.current++; locationRequest.current?.abort(); };
-  }, [enabled, currentUserId, loadOffice]);
-  useEffect(() => {
-    const changed = () => { const next = document.visibilityState === 'visible'; setVisible(next); setSample(null); sequence.current++; if (!next) locationRequest.current?.abort(); if (next && enabled) loadOffice(); };
-    document.addEventListener('visibilitychange', changed);
-    return () => { document.removeEventListener('visibilitychange', changed); };
-  }, [enabled, loadOffice]);
-  useEffect(() => {
-    if (!enabled || !visible || !navigator.geolocation) return;
-    const user = currentUserId;
-    let active = true;
-    setTracking(true);
-    const id = navigator.geolocation.watchPosition(position => {
-      if (active && mounted.current && activeUser.current === user) {
-        setSample({ latitude: position.coords.latitude, longitude: position.coords.longitude, accuracy: position.coords.accuracy, readAt: Date.now() });
-        setError('');
-      }
-    }, event => {
-      if (active && mounted.current && activeUser.current === user) {
-        if (event.code === 1) {
-          setSample(null);
-          setError('Allow GPS access to enable attendance.');
-        } else if (!sampleRef.current || Date.now() - sampleRef.current.readAt > 30000) {
-          setError('GPS unavailable. Refresh your location.');
-        }
-      }
-    }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 });
-    return () => { active = false; navigator.geolocation.clearWatch(id); };
-  }, [enabled, visible, currentUserId]);
-  const refresh = async () => {
-    if (!enabled || reading) return;
-    const ticket = ++sequence.current;
-    locationRequest.current?.abort();
-    const controller = new AbortController(); locationRequest.current = controller;
-    setReading(true); setError('');
-    try {
-      const office = await loadOffice();
-      if (!mounted.current || ticket !== sequence.current) return;
-      if (!office) throw new Error('No saved office is available. Contact your administrator.');
-      setLiveAccuracy(null);
-    let location;
-    try {
-      // 12 s is enough for a phone to lock GPS; a device that cannot reach the limit by then needs a better signal, not more waiting.
-      location = await readCurrentLocation({ maximumAccuracy: Number(office.max_accuracy_m ?? 50), signal: controller.signal, timeoutMs: 12000, onProgress: s => { if (mounted.current) setLiveAccuracy(Math.round(s.accuracy)); } });
-    } finally { if (mounted.current) setLiveAccuracy(null); }
-      if (mounted.current && ticket === sequence.current) { setSample(location); setTracking(true); }
-    } catch (error) { if (mounted.current && ticket === sequence.current) { setSample(null); setError(error.message); } }
-    finally { if (mounted.current) setReading(false); }
-  };
-  useEffect(() => {
-    if (!enabled || !tracking || !visible) return;
-    const timer = setInterval(() => setClock(Date.now()), 1000);
-    return () => clearInterval(timer);
-  }, [enabled, tracking, visible]);
-  const stale = !!sample && Math.max(clock, Date.now()) - sample.readAt > 30000;
-  const evaluation = evaluateLocation(officeState.office, sample);
-  const eligible = enabled && tracking && visible && !!sample && !error && !officeState.error && !stale && evaluation.eligible;
-  const getPunchLocation = async () => {
-    // Always obtain a valid reading and saved office before a consequential punch.
-    const actor = currentUserId;
-    if (!enabled || !mounted.current || document.visibilityState !== 'visible') throw new Error('Location check cancelled. Keep this page open and try again.');
-    locationRequest.current?.abort();
-    const controller = new AbortController(); locationRequest.current = controller;
-    const office = await loadOffice();
-    if (!mounted.current || actor !== activeUser.current || controller.signal.aborted) throw new Error('Attendance cancelled because the page or account changed.');
-    if (!office) throw new Error('No saved office is available. Contact your administrator.');
-    const maxAcc = Number(office.max_accuracy_m ?? 75);
-    // Fast path: reuse a fresh live watch reading taken within the last 30 seconds if accurate and inside radius.
-    const warm = sampleRef.current;
-    if (warm && Date.now() - warm.readAt <= 30000 && warm.accuracy <= maxAcc) {
-      const quick = evaluateLocation(office, warm);
-      if (quick.eligible) return { latitude: warm.latitude, longitude: warm.longitude, accuracy: warm.accuracy };
+      const response = await api.getOfficeLocation();
+      if (!response.success) throw new Error(response.error || 'Could not load your saved office.');
+      result = { office: response.data };
+    } catch (error) {
+      result = { error: error.message };
     }
-    setLiveAccuracy(null);
-    let location;
+
+    if (session.current !== active) return null;
+    if (request === active.officeRequest) setOfficeState({ ...result, userId: currentUserId });
+    return result;
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    session.current = { userId: currentUserId, officeRequest: 0 };
+    setOfficeState(null);
+    setProgress(null);
+    void loadOffice();
+    return () => {
+      session.current = null;
+      locationRequest.current?.abort();
+      locationRequest.current = null;
+    };
+  }, [enabled, currentUserId, loadOffice]);
+
+  useDataRefresh(loadOffice, ['offices', 'employees'], { enabled });
+
+  const savedOffice = officeState?.userId === currentUserId ? officeState : null;
+
+  const checkLocation = async () => {
+    const active = session.current;
+    if (!enabled || active?.userId !== currentUserId || document.visibilityState !== 'visible') {
+      throw new Error('Keep the attendance page open and retry the location check.');
+    }
+
+    locationRequest.current?.abort();
+    const controller = new AbortController();
+    locationRequest.current = controller;
+    const isCurrent = () => session.current === active && locationRequest.current === controller;
+
+    setProgress(null);
     try {
-      location = await readCurrentLocation({
-        maximumAccuracy: maxAcc,
+      // Use the preloaded office so GPS can start directly from the employee's click.
+      const result = savedOffice?.office ? savedOffice : await loadOffice();
+      if (!isCurrent()) throw new Error('The location check was cancelled. Please retry.');
+      if (!result?.office) throw new Error(result?.error || 'Your office has not been configured. Contact your administrator.');
+      let office = result.office;
+
+      const reading = readCurrentLocation({
+        maximumAccuracy: 75,
         signal: controller.signal,
         timeoutMs: 15000,
         canFinishEarly: sample => evaluateLocation(office, sample).eligible,
-        onProgress: sample => { if (mounted.current) setLiveAccuracy(Math.round(sample.accuracy)); }
+        onProgress: sample => { if (isCurrent()) setProgress(sample.accuracy); }
       });
-    } finally { if (mounted.current) setLiveAccuracy(null); }
-    if (!mounted.current || actor !== activeUser.current || document.visibilityState !== 'visible') throw new Error('Attendance cancelled because the signed-in account changed.');
-    const evaluation = evaluateLocation(office, location);
-    if (mounted.current) { setSample(location); }
-    if (!evaluation.eligible) throw new Error(evaluation.message);
-    return { latitude: location.latitude, longitude: location.longitude, accuracy: location.accuracy };
+      // Refresh the assignment while GPS is running in case an admin changed the office.
+      const officeRefresh = result === savedOffice
+        ? loadOffice().then(latest => {
+          if (!latest?.office) throw new Error(latest?.error || 'Your office has not been configured. Contact your administrator.');
+          office = latest.office;
+        })
+        : Promise.resolve();
+      const [location] = await Promise.all([reading, officeRefresh]);
+      if (!isCurrent() || document.visibilityState !== 'visible') {
+        throw new Error('The location check was cancelled. Please retry.');
+      }
+
+      const evaluation = evaluateLocation(office, location);
+      if (!evaluation.eligible) throw new Error(evaluation.message);
+
+      const { latitude, longitude, accuracy } = location;
+      return { latitude, longitude, accuracy, message: evaluation.message };
+    } finally {
+      if (isCurrent()) {
+        locationRequest.current = null;
+        controller.abort();
+        setProgress(null);
+      }
+    }
   };
-  return { ...officeState, sample, liveAccuracy, reading, tracking, eligible, distance: evaluation.distance, message: officeState.error || error || (stale ? 'Your GPS reading expired. Refresh your location to enable attendance.' : evaluation.message), refresh, getPunchLocation, stop: () => { sequence.current++; locationRequest.current?.abort(); setTracking(false); setSample(null); setError(''); } };
+
+  return {
+    office: savedOffice?.office,
+    loading: enabled && !savedOffice,
+    progress,
+    checkLocation
+  };
 }

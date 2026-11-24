@@ -64,7 +64,7 @@ export function readCurrentLocation({ geolocation = globalThis.navigator?.geoloc
     };
     const failed = error => {
       if (settled) return;
-      if (error.code === 1) finish(failure('Location permission denied. Allow location for this site and enable precise location in your device settings, then retry.', 'GPS_PERMISSION_DENIED'));
+      if (error.code === 1) finish(failure('Location permission denied. Allow Location in your browser’s site settings and turn on Location Services and precise location on your device, then try again.', 'GPS_PERMISSION_DENIED'));
       else if (typeof geolocation.watchPosition !== 'function') finish(failure(error.code === 3 ? 'GPS timed out. Enable Location Services and retry outdoors or near a window.' : 'GPS is unavailable. Enable Location Services and precise location, then retry.', error.code === 3 ? 'GPS_TIMEOUT' : 'GPS_UNAVAILABLE'));
       else triggerFallback();
       // A temporary unavailable/timeout update can be followed by a better fix.
