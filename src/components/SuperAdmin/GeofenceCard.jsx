@@ -14,7 +14,6 @@ export function GeofenceCard({ resource, setTab }) {
   const [gpsProgress, setGpsProgress] = useState('');
   const locationRequest = useRef(null);
   const [locating, setLocating] = useState(false);
-  const [officeCandidate, setOfficeCandidate] = useState(null);
   const [officeAction, setOfficeAction] = useState(null);
   const officeBusy = officeAction !== null;
   const [officeNotice, setOfficeNotice] = useState('');
@@ -26,7 +25,7 @@ export function GeofenceCard({ resource, setTab }) {
   useEffect(() => {
     activeRequest.current += 1;
     locationRequest.current?.abort();
-    setGps(null); setGpsError(''); setLocating(false); setOfficeCandidate(null);
+    setGps(null); setGpsError(''); setGpsProgress(''); setLocating(false);
     return () => { activeRequest.current += 1; locationRequest.current?.abort(); };
   }, [officeKey]);
 
@@ -53,30 +52,33 @@ export function GeofenceCard({ resource, setTab }) {
     finally { if (requestId === activeRequest.current) { setLocating(false); setGpsProgress(''); } }
   };
 
-  const captureCompany = async () => {
-    if (officeOperation.current || locating) return;
-    officeOperation.current = true; setOfficeAction('capturing'); setOfficeCandidate(null); setOfficeNotice(''); setGpsError('');
+  const updateCompanyLocation = async () => {
+    if (!office || officeOperation.current || locating) return;
+    officeOperation.current = true;
+    setOfficeAction('capturing');
+    setOfficeNotice('');
+    setGpsError('');
     const ticket = activeRequest.current;
-    const controller = new AbortController(); locationRequest.current?.abort(); locationRequest.current = controller;
+    const controller = new AbortController();
+    locationRequest.current?.abort();
+    locationRequest.current = controller;
     try {
-      const result = await captureOfficeLocation({ geolocation: navigator.geolocation, includeNetwork: false, signal: controller.signal });
-      if (ticket !== activeRequest.current) return;
+      const result = await captureOfficeLocation({ includeNetwork: false, signal: controller.signal });
+      if (ticket !== activeRequest.current || controller.signal.aborted) return;
       if (!result.coordinates) throw new Error(result.errors.join(' ') || 'Could not read your location.');
-      setOfficeCandidate({ ...result.coordinates, capturedAt: Date.now() });
-    } catch (error) { if (ticket === activeRequest.current) setGpsError(error.message); }
-    finally { officeOperation.current = false; setOfficeAction(null); }
-  };
-  const saveCompany = async () => {
-    if (!officeCandidate || officeOperation.current) return;
-    if (Date.now() - officeCandidate.capturedAt > 60000) { setOfficeCandidate(null); setGpsError('Location preview expired. Capture your current location again.'); return; }
-    officeOperation.current = true; setOfficeAction('saving'); setGpsError('');
-    try {
-      const response = await api.updateOfficeLocation({ latitude: Number(officeCandidate.latitude), longitude: Number(officeCandidate.longitude) });
+      const { latitude, longitude, accuracy } = result.coordinates;
+      setOfficeAction('saving');
+      const response = await api.updateOfficeLocation({
+        office_id: office.id,
+        latitude: Number(latitude),
+        longitude: Number(longitude)
+      });
+      if (ticket !== activeRequest.current) return;
       if (!response.success || !response.data) throw new Error(response.error || 'Could not confirm the saved company location.');
       resource.updateData(data => ({ ...data, office: response.data }));
-      setOfficeCandidate(null); setOfficeNotice('Primary office location saved.');
+      setOfficeNotice(`Saved ${response.data.name} at ${latitude}, ${longitude} using a ±${Math.round(accuracy)} m GPS reading.`);
       void resource.refresh();
-    } catch (error) { setGpsError(error.message); }
+    } catch (error) { if (ticket === activeRequest.current) setGpsError(error.message); }
     finally { officeOperation.current = false; setOfficeAction(null); }
   };
 
@@ -110,12 +112,17 @@ export function GeofenceCard({ resource, setTab }) {
         <p><strong>{verified ? 'Your current GPS' : 'Approximate GPS (not verified)'}</strong><span>{gps ? `${gps.latitude.toFixed(6)}, ${gps.longitude.toFixed(6)}` : 'Press Check my location'}</span></p>
         {gps && <p><strong>Last GPS check</strong><span>{new Date(gps.readAt).toLocaleTimeString('en-IN')}</span></p>}
       </div>
-      {verified && !inside && !locating && <p className="sa-info" role="status">GPS places you {formatGpsDistance(gps.distance)} from the saved company pin; the limit is {ATTENDANCE_RADIUS_M} m. If this pin is not the office you are standing in, capture and save the correct company location below. Saving changes the office anchor for employees using it.</p>}
+      {verified && !inside && !locating && <p className="sa-info" role="status">GPS places you {formatGpsDistance(gps.distance)} from the saved office pin. Check the geographic map before updating the pin.</p>}
       {gpsProgress && <p role="status" className="sa-info">{gpsProgress}</p>}
       <div className="sa-info"><Info size={13} /><span>{office ? <>The office location stays fixed. GPS updates only your orange marker. All attendance actions require employees to be within <strong>{ATTENDANCE_RADIUS_M} m</strong> with reported GPS accuracy within the configured ±{office.max_accuracy_m || 50} m limit. Accuracy does not increase the {ATTENDANCE_RADIUS_M} m boundary. </> : <>Set your office location to enable distance checks. </>}Location is never shared with teammates.</span></div>
       <button className="sa-location-button" onClick={locate} disabled={!office || locating || officeBusy}>{locating ? <Loader2 size={13} className="animate-spin" /> : <Navigation size={13} />}{locating ? 'Checking location…' : gps ? 'Refresh my location' : 'Check my location'}</button>
-      <button type="button" className="sa-location-button" onClick={captureCompany} disabled={officeBusy || locating}>{officeAction === 'capturing' ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{officeAction === 'capturing' ? 'Capturing office GPS…' : 'Change fixed office location using GPS'}</button>
-      {officeCandidate && <div className="sa-info"><div><strong>New fixed office location — preview</strong><p>{officeCandidate.latitude}, {officeCandidate.longitude} · Accuracy ±{Math.round(officeCandidate.accuracy)} m · Radius {ATTENDANCE_RADIUS_M} m</p><p>Saving sets the company location for employees using the primary office.</p><div className="flex flex-wrap gap-3 mt-3"><button type="button" className="sa-request-primary" onClick={saveCompany} disabled={officeBusy}>{officeAction === 'saving' ? 'Saving company location…' : 'Save company location'}</button><button type="button" className="sa-text-button" onClick={() => setOfficeCandidate(null)} disabled={officeBusy}>Cancel</button></div></div></div>}
+      {office && <>
+        <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={updateCompanyLocation} disabled={officeBusy || locating}>
+          {officeBusy ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+          {officeAction === 'capturing' ? 'Reading office GPS…' : officeAction === 'saving' ? 'Saving office location…' : 'Save current location as office pin'}
+        </button>
+        <p id="save-office-gps-help" className="sa-office-form-help">Use this while standing at {office.name}. It saves a fresh GPS reading within ±15 m accuracy and updates the pin for employees who use this office.</p>
+      </>}
       {officeNotice && <p role="status" className="sa-info">{officeNotice}</p>}
       {(gpsError || lowAccuracy || verified && !inside) && <div className="sa-info"><div>{gpsError && <p role="alert" className="sa-error sa-gps-error">{gpsError}</p>}<strong>Improve location accuracy</strong><ol className="sa-gps-help"><li>Allow location for this site and enable precise location in your device settings.</li><li>Try a GPS-capable phone. Computer location can be less precise.</li><li>Move near a window or outdoors, then press Refresh my location.</li><li>Open the geographic map and check whether the saved office pin is on your building. Change it only if the saved office location is wrong.</li></ol></div></div>}
     </>}
