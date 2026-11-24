@@ -1,8 +1,15 @@
 // Read real device coordinates; never substitute the office pin or an IP location.
-export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, targetAccuracy = 15, timeoutMs = 20000, graceMs = 1200, canFinishEarly = () => true, onProgress, secureContext = globalThis.isSecureContext } = {}) {
+export function readCurrentLocation({ geolocation = globalThis.navigator?.geolocation, signal, maximumAccuracy = 50, targetAccuracy = 15, timeoutMs = 20000, graceMs = 1200, canFinishEarly = () => true, onProgress, secureContext = globalThis.isSecureContext, permissionsPolicy = globalThis.document?.permissionsPolicy ?? globalThis.document?.featurePolicy } = {}) {
   return new Promise((resolve, reject) => {
     const failure = (message, code = 'GPS_UNAVAILABLE') => Object.assign(new Error(message), { code });
-    if (secureContext === false) { reject(failure('Location requires HTTPS or localhost. Open the app on a secure connection and retry.', 'GPS_INSECURE_CONTEXT')); return; }
+    if (secureContext === false) {
+      reject(failure('Location requires HTTPS or localhost. Open the company’s HTTPS attendance link directly in your browser. If you only have an HTTP link, ask your administrator for the HTTPS link.', 'GPS_INSECURE_CONTEXT'));
+      return;
+    }
+    if (permissionsPolicy?.allowsFeature?.('geolocation') === false) {
+      reject(failure('This page’s permissions policy blocks location access. Open the company’s HTTPS attendance link directly in your browser. If that page still shows this error, contact your administrator.', 'GPS_POLICY_BLOCKED'));
+      return;
+    }
     if (!geolocation) { reject(failure('GPS is unavailable in this browser. Enable device Location Services and use a supported browser.')); return; }
     let settled = false, watchId, timer, graceTimer, kickTimer, best;
     const finish = (error, sample) => {
