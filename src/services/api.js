@@ -127,8 +127,20 @@ export const api = {
     return res.json();
   },
   getOfficeLocation: async () => {
-    const res = await appFetch(`${API_BASE}/office-location`, { headers: getHeaders(localStorage.getItem('knooviq_user_id')), cache: 'no-store' });
-    return res.json();
+    const requestOffice = async () => {
+      const res = await appFetch(`${API_BASE}/office-location`, { headers: getHeaders(), cache: 'no-store' });
+      if ([502, 503, 504].includes(res.status) || (res.ok && res.headers.get('content-type')?.includes('text/html'))) {
+        throw new TypeError('The attendance server is temporarily unavailable. Please retry.');
+      }
+      return res.json();
+    };
+    try {
+      return await requestOffice();
+    } catch (error) {
+      if (!(error instanceof TypeError)) throw error;
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      return requestOffice();
+    }
   },
   updateOfficeLocation: async (payload) => {
     const res = await appFetch(`${API_BASE}/office-location`, {
