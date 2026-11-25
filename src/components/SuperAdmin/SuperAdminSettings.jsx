@@ -14,6 +14,7 @@ function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
   const { currentUserId } = useAuth();
   const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: ATTENDANCE_RADIUS_M, max_accuracy_m: attendanceAccuracyLimit(office?.max_accuracy_m), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
   const [officeIps, setOfficeIps] = useState(office?.office_ips?.join('\n') ?? '');
+  const [publicIP, setPublicIP] = useState(office?.office_public_ip ?? '');
   const [wifiEnabled, setWifiEnabled] = useState(office?.wifi_attendance_enabled ?? false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -79,6 +80,7 @@ function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
       const res = await api.saveAdminOffice(currentUserId, office?.id, {
         ...form,
         office_ips: officeIps,
+        office_public_ip: publicIP,
         wifi_attendance_enabled: wifiEnabled,
         user_ids: office?.user_ids || [],
         is_primary: office?.is_primary || !data.offices.length,
@@ -93,7 +95,10 @@ function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
       <label htmlFor="sa-office-name">Office name</label><input id="sa-office-name" value={form.name} onChange={e => change('name', e.target.value)} required maxLength={150} disabled={saving} />
       <label htmlFor="sa-office-wifi-ips">Office Wi-Fi IP addresses or subnets</label>
       <textarea id="sa-office-wifi-ips" rows={3} value={officeIps} onChange={e => setOfficeIps(e.target.value)} placeholder="192.168.1.0/24" disabled={saving} aria-describedby="sa-office-wifi-help" />
-      <p id="sa-office-wifi-help" className="sa-office-form-help">Enter one address or subnet per line. Use the private subnet assigned by your office router to cover devices on that network. Your current connection IP is {data.connection_ip || 'unavailable'}.</p>
+      <p id="sa-office-wifi-help" className="sa-office-form-help">For the local app, enter the private subnet assigned by your office router. Enter one address or subnet per line.</p>
+      <label htmlFor="sa-office-public-ip">Dedicated public IPv4 for the hosted app</label>
+      <input id="sa-office-public-ip" value={publicIP} onChange={e => setPublicIP(e.target.value)} disabled={saving} maxLength={15} inputMode="decimal" aria-describedby="sa-office-public-ip-help" />
+      <p id="sa-office-public-ip-help" className="sa-office-form-help">Use the static public IPv4 assigned to this office by your internet provider. The server sees your current connection IP as {data.connection_ip || 'unavailable'}.</p>
       <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in and check-out over office Wi-Fi when GPS is unavailable</label>
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
       <button type="button" className="sa-office-location-action" onClick={locate} disabled={saving || locating}>{locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{locating ? 'Reading current location…' : 'Use my current location'}</button>
@@ -150,7 +155,7 @@ export function SuperAdminSettings({ initialTab = 'offices' } = {}) {
         {removing && <div className="sa-cancel-confirm" role="group" aria-label="Confirm office removal"><p>Remove {removing.name}? Its configuration will be archived.</p><div><button onClick={remove} disabled={busy}>{busy ? 'Removing…' : 'Remove office'}</button><button onClick={() => setRemoving(null)} disabled={busy}>Keep office</button></div></div>}
         {!data.offices.length ? <div className="sa-requests-empty">No offices configured. Add your first office to get started.</div> : <div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Coordinates</th><th>Radius</th><th>Timezone</th><th>Office IPs</th><th>Users</th><th>Actions</th></tr></thead><tbody>{data.offices.map(office => <tr key={office.id}><td><strong>{office.name}</strong>{office.is_primary && <span className="sa-office-primary">Primary</span>}{office.address && <small>{office.address}</small>}
           <button type="button" className="sa-text-button whitespace-nowrap" onClick={() => { setError(''); setEditor({ office, focusWifi: true }); }}>
-            {office.office_ips.length ? 'Edit Wi-Fi IP' : 'Add Wi-Fi IP'}
+            {office.office_ips.length || office.office_public_ip ? 'Edit Wi-Fi IP' : 'Add Wi-Fi IP'}
           </button>
         </td><td className="sa-office-coordinates">{Number(office.latitude).toFixed(5)}, {Number(office.longitude).toFixed(5)}</td><td>{office.radius_m} m</td><td className="sa-admin-muted">{office.timezone}</td><td><div className="sa-office-ip-list">{office.office_ips.length ? office.office_ips.map(ip => <code key={ip}>{ip}</code>) : <span className="sa-admin-muted">Not registered</span>}</div>{office.network_matches && <span className="sa-office-primary">Current network ✓</span>}</td><td>{office.users_count}{office.inherited_users_count > 0 && <small>{office.inherited_users_count} default</small>}</td><td><div className="sa-office-actions"><button aria-label={`Edit ${office.name}`} onClick={() => { setError(''); setEditor({ office }); }}><Pencil size={18} /></button><button className="sa-office-delete" aria-label={`Remove ${office.name}`} onClick={() => { setError(''); setRemoving(office); }} disabled={busy}><Trash2 size={18} /></button></div></td></tr>)}</tbody></table></div>}
 </>}

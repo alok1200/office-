@@ -55,7 +55,13 @@ export function useOfficeGeofence(enabled) {
 
     const { office } = result;
     const status = officeWifiMessage(office);
-    const connection = office.office_connection_ip ? `The server sees your connection as ${office.office_connection_ip}.` : 'The server could not read your connection IP.';
+    const connection = office.office_connection_type === 'PUBLIC'
+      ? office.office_connection_ip
+        ? `The hosted server sees your public IP as ${office.office_connection_ip}.`
+        : 'The hosted server could not verify your public IP. Contact your administrator.'
+      : office.office_connection_ip
+        ? `The server sees your connection as ${office.office_connection_ip}.`
+        : 'The server could not read your connection IP.';
     const message = `${status} ${connection}`;
     if (!office.office_wifi_matched) throw new Error(message);
     return message;

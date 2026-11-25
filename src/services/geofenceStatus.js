@@ -15,6 +15,7 @@ const gpsFallbackMessages = {
 export function officeWifiMessage(office) {
   if (!office.wifi_attendance_enabled) return 'Office Wi-Fi attendance is turned off.';
   if (office.office_wifi_matched) return 'Office Wi-Fi matched.';
+  if (office.office_connection_type === 'PUBLIC' && office.office_public_ip_configured === false) return 'Ask your Super Admin to register the office’s dedicated public IP for hosted attendance.';
   return 'Office Wi-Fi could not be verified.';
 }
 
