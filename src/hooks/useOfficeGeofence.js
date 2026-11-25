@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
-import { attendanceAccuracyLimit, evaluateLocation } from '../services/geofenceStatus';
+import { attendanceAccuracyLimit, attendanceLocationFailure, evaluateLocation, officeWifiMessage } from '../services/geofenceStatus';
 import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
 import { useDataRefresh } from './useDataRefresh';
-
-const wifiFallbackErrors = new Set(['GPS_UNAVAILABLE', 'GPS_TIMEOUT', 'GPS_PERMISSION_DENIED', 'GPS_INSECURE_CONTEXT', 'GPS_POLICY_BLOCKED', 'LOW_ACCURACY']);
 
 export function useOfficeGeofence(enabled) {
   const { currentUserId } = useAuth();
@@ -25,7 +23,7 @@ export function useOfficeGeofence(enabled) {
       if (!response.success) throw new Error(response.error || 'Could not load your saved office.');
       result = { office: response.data };
     } catch (error) {
-      result = { error: error.message };
+      result = { error: error instanceof TypeError ? 'Could not reach the attendance server. Check your connection and retry.' : error.message };
     }
 
     if (session.current !== active) return null;
@@ -87,19 +85,16 @@ export function useOfficeGeofence(enabled) {
       if (!isCurrent() || document.visibilityState !== 'visible') {
         throw new Error('The location check was cancelled. Please retry.');
       }
-      if (outcome.error) {
-        if (allowWifi && office.office_wifi_matched && wifiFallbackErrors.has(outcome.error.code)) {
-          return { message: `Connected to the registered network for ${office.name}. Check-in and check-out are available over office Wi-Fi.` };
-        }
-        throw outcome.error;
+      const { location } = outcome;
+      const evaluation = outcome.error || evaluateLocation(office, location);
+      if (!evaluation.eligible) {
+        const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation, allowWifi);
+        if (fallback) return { location: {}, message, gpsSummary };
+        throw Object.assign(new Error(message), { code: evaluation.code });
       }
 
-      const { location } = outcome;
-      const evaluation = evaluateLocation(office, location);
-      if (!evaluation.eligible) throw new Error(evaluation.message);
-
       const { latitude, longitude, accuracy } = location;
-      return { latitude, longitude, accuracy, message: evaluation.message };
+      return { location: { latitude, longitude, accuracy }, message: `GPS verified. ${evaluation.message} ${officeWifiMessage(office)}` };
     } finally {
       if (isCurrent()) {
         locationRequest.current = null;

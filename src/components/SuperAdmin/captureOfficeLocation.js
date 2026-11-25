@@ -1,5 +1,5 @@
 import { readCurrentLocation } from '../../services/currentLocation.js';
-export const DIRECT_SAVE_ACCURACY_M = 15;
+export const OFFICE_CAPTURE_TARGET_ACCURACY_M = 15;
 export const OFFICE_CAPTURE_ACCURACY_M = 75;
 
 export async function captureOfficeLocation({ geolocation, readConnection, includeGPS = true, includeNetwork = true, signal }) {
@@ -7,7 +7,7 @@ export async function captureOfficeLocation({ geolocation, readConnection, inclu
     geolocation,
     signal,
     maximumAccuracy: OFFICE_CAPTURE_ACCURACY_M,
-    targetAccuracy: DIRECT_SAVE_ACCURACY_M,
+    targetAccuracy: OFFICE_CAPTURE_TARGET_ACCURACY_M,
     graceMs: 4000
   }).then(sample => ({ latitude: sample.latitude.toFixed(6), longitude: sample.longitude.toFixed(6), accuracy: sample.accuracy }));
   const connection = !includeNetwork ? Promise.resolve(null) : Promise.resolve().then(() => readConnection(signal)).then(response => {

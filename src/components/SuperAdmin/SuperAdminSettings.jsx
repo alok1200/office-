@@ -5,12 +5,12 @@ import { useAuth } from '../../context/AuthContext';
 import { ATTENDANCE_RADIUS_M, MAX_ATTENDANCE_ACCURACY_M, attendanceAccuracyLimit } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
-import { captureOfficeLocation, DIRECT_SAVE_ACCURACY_M } from './captureOfficeLocation';
+import { captureOfficeLocation, OFFICE_CAPTURE_TARGET_ACCURACY_M } from './captureOfficeLocation';
 import { HRAdminForm } from './HRAdminForm';
 
 const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['shifts', 'Shifts', Clock3], ['holidays', 'Holidays', CalendarDays]];
 
-function OfficeForm({ office, data, onClose, onSaved }) {
+function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
   const { currentUserId } = useAuth();
   const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: ATTENDANCE_RADIUS_M, max_accuracy_m: attendanceAccuracyLimit(office?.max_accuracy_m), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
   const [officeIps, setOfficeIps] = useState(office?.office_ips?.join('\n') ?? '');
@@ -27,7 +27,8 @@ function OfficeForm({ office, data, onClose, onSaved }) {
   useEffect(() => {
     mounted.current = true;
     const previous = document.activeElement, overflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden'; panel.current.querySelector('input')?.focus();
+    document.body.style.overflow = 'hidden';
+    panel.current.querySelector(focusWifi ? '#sa-office-wifi-ips' : '#sa-office-name')?.focus();
     const keydown = e => {
       if (e.key === 'Escape' && !busy.current) onClose();
       if (e.key !== 'Tab') return;
@@ -54,7 +55,7 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       if (result.coordinates) {
         const { latitude, longitude, accuracy } = result.coordinates;
         setForm(old => ({ ...old, latitude, longitude }));
-        const needsMapReview = accuracy > DIRECT_SAVE_ACCURACY_M;
+        const needsMapReview = accuracy > OFFICE_CAPTURE_TARGET_ACCURACY_M;
         if (needsMapReview) setShowPinMap(true);
         setCaptureNotice(`GPS accuracy is ±${Math.round(accuracy)} m. ${needsMapReview ? 'Check the blue pin on the map and move it to your office building if needed.' : 'Review the coordinates.'} Press Save office to apply the location.`);
       } else {
@@ -90,6 +91,10 @@ function OfficeForm({ office, data, onClose, onSaved }) {
   return <div className="sa-request-overlay" onClick={e => { if (e.target === e.currentTarget) close(); }}><section ref={panel} tabIndex={-1} className="sa-request-dialog sa-office-dialog" role="dialog" aria-modal="true" aria-labelledby="sa-office-form-title"><button className="sa-dialog-close" onClick={close} disabled={saving} aria-label="Close office form"><X size={21} /></button><h2 id="sa-office-form-title">{office ? 'Edit office' : 'Add office'}</h2><p>Configure GPS and office Wi-Fi attendance.</p>
     <form onSubmit={save}>{error && <p role="alert" className="sa-request-error">{error}</p>}
       <label htmlFor="sa-office-name">Office name</label><input id="sa-office-name" value={form.name} onChange={e => change('name', e.target.value)} required maxLength={150} disabled={saving} />
+      <label htmlFor="sa-office-wifi-ips">Office Wi-Fi IP addresses or subnets</label>
+      <textarea id="sa-office-wifi-ips" rows={3} value={officeIps} onChange={e => setOfficeIps(e.target.value)} placeholder="192.168.1.0/24" disabled={saving} aria-describedby="sa-office-wifi-help" />
+      <p id="sa-office-wifi-help" className="sa-office-form-help">Enter one address or subnet per line. Use the private subnet assigned by your office router to cover devices on that network. Your current connection IP is {data.connection_ip || 'unavailable'}.</p>
+      <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in and check-out over office Wi-Fi when GPS is unavailable</label>
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
       <button type="button" className="sa-office-location-action" onClick={locate} disabled={saving || locating}>{locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{locating ? 'Reading current location…' : 'Use my current location'}</button>
       <button type="button" className="sa-location-button" onClick={() => setShowPinMap(value => !value)} aria-expanded={showPinMap} aria-controls="office-pin-map" disabled={saving || locating}><MapPin size={15} />{showPinMap ? 'Hide office pin map' : 'Adjust office pin on map'}</button>
@@ -97,10 +102,6 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       {captureNotice && <p className="sa-office-capture-notice" role="status">{captureNotice}</p>}
       <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={ATTENDANCE_RADIUS_M} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={MAX_ATTENDANCE_ACCURACY_M} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
       <p id="office-radius-help" className="sa-office-form-help">GPS verification requires a reported position within {ATTENDANCE_RADIUS_M} m of the saved pin. Set this office’s GPS accuracy limit separately, up to ±{MAX_ATTENDANCE_ACCURACY_M} m.</p>
-      <label htmlFor="sa-office-wifi-ips">Office Wi-Fi IP addresses or subnets</label>
-      <textarea id="sa-office-wifi-ips" rows={3} value={officeIps} onChange={e => setOfficeIps(e.target.value)} placeholder="192.168.1.0/24" disabled={saving} aria-describedby="sa-office-wifi-help" />
-      <p id="sa-office-wifi-help" className="sa-office-form-help">Enter one address or subnet per line. Use the private subnet assigned by your office router to cover devices on that network. Your current connection IP is {data.connection_ip || 'unavailable'}.</p>
-      <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in and check-out over office Wi-Fi when GPS is unavailable</label>
       <label htmlFor="sa-office-zone">Timezone</label><input id="sa-office-zone" list="sa-office-timezones" value={form.timezone} onChange={e => change('timezone', e.target.value)} required disabled={saving} /><datalist id="sa-office-timezones">{['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Europe/London', 'America/New_York'].map(zone => <option key={zone} value={zone} />)}</datalist>
       <label htmlFor="sa-office-address">Address</label><input id="sa-office-address" value={form.address} onChange={e => change('address', e.target.value)} maxLength={500} disabled={saving} />
       <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={close} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving || locating}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save office'}</button></div>
@@ -147,7 +148,11 @@ export function SuperAdminSettings({ initialTab = 'offices' } = {}) {
       {resource.loading ? <p role="status" className="sa-requests-empty"><Loader2 size={18} className="animate-spin" />Loading office settings…</p> : resource.error ? <p className="sa-request-error" role="alert">{resource.error} <button onClick={refresh}>Retry</button></p> : <>
       {tab === 'offices' && <><div className="sa-admin-section-header"><div><h2>Offices</h2><p>Physical office locations and GPS geofences.</p></div><button className="sa-request-primary" onClick={() => { setError(''); setEditor({ office: null }); }}><Plus size={20} />Add office</button></div>
         {removing && <div className="sa-cancel-confirm" role="group" aria-label="Confirm office removal"><p>Remove {removing.name}? Its configuration will be archived.</p><div><button onClick={remove} disabled={busy}>{busy ? 'Removing…' : 'Remove office'}</button><button onClick={() => setRemoving(null)} disabled={busy}>Keep office</button></div></div>}
-        {!data.offices.length ? <div className="sa-requests-empty">No offices configured. Add your first office to get started.</div> : <div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Coordinates</th><th>Radius</th><th>Timezone</th><th>Office IPs</th><th>Users</th><th>Actions</th></tr></thead><tbody>{data.offices.map(office => <tr key={office.id}><td><strong>{office.name}</strong>{office.is_primary && <span className="sa-office-primary">Primary</span>}{office.address && <small>{office.address}</small>}</td><td className="sa-office-coordinates">{Number(office.latitude).toFixed(5)}, {Number(office.longitude).toFixed(5)}</td><td>{office.radius_m} m</td><td className="sa-admin-muted">{office.timezone}</td><td><div className="sa-office-ip-list">{office.office_ips.length ? office.office_ips.map(ip => <code key={ip}>{ip}</code>) : <span className="sa-admin-muted">Not registered</span>}</div>{office.network_matches && <span className="sa-office-primary">Current network ✓</span>}</td><td>{office.users_count}{office.inherited_users_count > 0 && <small>{office.inherited_users_count} default</small>}</td><td><div className="sa-office-actions"><button aria-label={`Edit ${office.name}`} onClick={() => { setError(''); setEditor({ office }); }}><Pencil size={18} /></button><button className="sa-office-delete" aria-label={`Remove ${office.name}`} onClick={() => { setError(''); setRemoving(office); }} disabled={busy}><Trash2 size={18} /></button></div></td></tr>)}</tbody></table></div>}
+        {!data.offices.length ? <div className="sa-requests-empty">No offices configured. Add your first office to get started.</div> : <div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Coordinates</th><th>Radius</th><th>Timezone</th><th>Office IPs</th><th>Users</th><th>Actions</th></tr></thead><tbody>{data.offices.map(office => <tr key={office.id}><td><strong>{office.name}</strong>{office.is_primary && <span className="sa-office-primary">Primary</span>}{office.address && <small>{office.address}</small>}
+          <button type="button" className="sa-text-button whitespace-nowrap" onClick={() => { setError(''); setEditor({ office, focusWifi: true }); }}>
+            {office.office_ips.length ? 'Edit Wi-Fi IP' : 'Add Wi-Fi IP'}
+          </button>
+        </td><td className="sa-office-coordinates">{Number(office.latitude).toFixed(5)}, {Number(office.longitude).toFixed(5)}</td><td>{office.radius_m} m</td><td className="sa-admin-muted">{office.timezone}</td><td><div className="sa-office-ip-list">{office.office_ips.length ? office.office_ips.map(ip => <code key={ip}>{ip}</code>) : <span className="sa-admin-muted">Not registered</span>}</div>{office.network_matches && <span className="sa-office-primary">Current network ✓</span>}</td><td>{office.users_count}{office.inherited_users_count > 0 && <small>{office.inherited_users_count} default</small>}</td><td><div className="sa-office-actions"><button aria-label={`Edit ${office.name}`} onClick={() => { setError(''); setEditor({ office }); }}><Pencil size={18} /></button><button className="sa-office-delete" aria-label={`Remove ${office.name}`} onClick={() => { setError(''); setRemoving(office); }} disabled={busy}><Trash2 size={18} /></button></div></td></tr>)}</tbody></table></div>}
 </>}
       {tab === 'users' && <><div className="sa-admin-section-header"><div><h2>Users</h2><p>Create HR Admin accounts and view saved office assignments.</p></div><button type="button" className="sa-request-primary" onClick={() => { setNotice(''); setCreatingHR(true); }}><Plus size={20} />Create HR Admin</button></div><div className="sa-admin-table"><table><thead><tr><th>Name</th><th>Employee ID</th><th>Login email</th><th>Role</th><th>Office</th></tr></thead><tbody>{data.users.map(user => <tr key={user.id}><td>{user.name}</td><td>{user.code}</td><td>{user.email || '—'}</td><td>{user.role.replaceAll('_', ' ')}</td><td>{data.offices.find(o => o.id === user.office_id)?.name || data.offices.find(o => o.is_primary)?.name || 'Unassigned'}{!user.office_id && <small>Default office</small>}</td></tr>)}</tbody></table></div></>}
       {tab === 'shifts' && <section className="sa-card"><h2>Shifts</h2><p className="sa-admin-subtitle">Shift configuration is not available in the current attendance service.</p></section>}
@@ -156,6 +161,6 @@ export function SuperAdminSettings({ initialTab = 'offices' } = {}) {
       </>}
     </section>
     {creatingHR && <HRAdminForm onClose={() => setCreatingHR(false)} onSaved={message => { setCreatingHR(false); setNotice(message); refresh(); }} />}
-    {editor && data && <OfficeForm office={editor.office} data={data} onClose={() => setEditor(null)} onSaved={message => { setEditor(null); setNotice(message); refresh(); setVersion(v => v + 1); }} />}
+    {editor && data && <OfficeForm office={editor.office} data={data} focusWifi={editor.focusWifi} onClose={() => setEditor(null)} onSaved={message => { setEditor(null); setNotice(message); refresh(); setVersion(v => v + 1); }} />}
   </div>;
 }

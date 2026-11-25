@@ -4,7 +4,7 @@ import { gpsQuality, formatGpsDistance } from '../../services/gpsPresentation';
 import { ATTENDANCE_RADIUS_M, evaluateLocation } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
 import { GeofenceMapPanel } from './GeofenceMapPanel';
-import { captureOfficeLocation, DIRECT_SAVE_ACCURACY_M, OFFICE_CAPTURE_ACCURACY_M } from './captureOfficeLocation';
+import { captureOfficeLocation, OFFICE_CAPTURE_ACCURACY_M } from './captureOfficeLocation';
 import { Info, Loader2, MapPin, Navigation, RefreshCw, Settings2, ShieldCheck, Map as MapIcon } from 'lucide-react';
 
 export function GeofenceCard({ resource, setTab }) {
@@ -64,21 +64,16 @@ export function GeofenceCard({ resource, setTab }) {
     locationRequest.current?.abort();
     locationRequest.current = controller;
     try {
-      let coordinates = reviewedCoordinates;
-      if (!coordinates) {
+      if (!reviewedCoordinates) {
         setOfficeCandidate(null);
         const result = await captureOfficeLocation({ includeNetwork: false, signal: controller.signal });
         if (ticket !== activeRequest.current || controller.signal.aborted) return;
         if (!result.coordinates) throw new Error(result.errors.join(' ') || 'Could not read your location.');
-        coordinates = result.coordinates;
-        if (coordinates.accuracy > DIRECT_SAVE_ACCURACY_M) {
-          setOfficeCandidate(coordinates);
-          setShowMap(true);
-          return;
-        }
+        setOfficeCandidate(result.coordinates);
+        setShowMap(true);
+        return;
       }
-      const { latitude, longitude, accuracy } = coordinates;
-      setOfficeAction('saving');
+      const { latitude, longitude, accuracy } = reviewedCoordinates;
       const response = await api.updateOfficeLocation({
         office_id: office.id,
         latitude: Number(latitude),
@@ -134,7 +129,7 @@ export function GeofenceCard({ resource, setTab }) {
       </>}
       {lowAccuracy && <div className="sa-info" role="status"><Info size={16} /><div><strong>Location not verified</strong><p>Your device reports accuracy ±{Math.round(gps.accuracy)} m; this office requires ±{office?.max_accuracy_m || 50} m or better. We cannot confirm inside or outside the {ATTENDANCE_RADIUS_M} m radius from this reading. Your orange marker appears when GPS meets the configured accuracy limit.</p><p>Enable precise location in your device settings and retry near a window or outdoors. A matching office network does not confirm your GPS position.</p></div></div>}
       <div className="sa-gps-details">
-        <p><strong>Primary office location</strong><span>{office ? `${Number(office.latitude).toFixed(6)}, ${Number(office.longitude).toFixed(6)}` : 'Not configured'}</span></p>
+        <p><strong>Saved office pin</strong><span>{office ? `${Number(office.latitude).toFixed(6)}, ${Number(office.longitude).toFixed(6)}` : 'Not configured'}</span></p>
         {office?.updated_at && <p><strong>Office last saved</strong><span>{new Date(office.updated_at).toLocaleString('en-IN', { timeZone: office.timezone || 'Asia/Kolkata', timeZoneName: 'short' })}</span></p>}
         <p><strong>{verified ? 'Your current GPS' : 'Approximate GPS (not verified)'}</strong><span>{gps ? `${gps.latitude.toFixed(6)}, ${gps.longitude.toFixed(6)}` : 'Press Check my location'}</span></p>
         {gps && <p><strong>Last GPS check</strong><span>{new Date(gps.readAt).toLocaleTimeString('en-IN')}</span></p>}
@@ -145,9 +140,9 @@ export function GeofenceCard({ resource, setTab }) {
       {office && <>
         <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={() => updateCompanyLocation()} disabled={officeBusy || locating}>
           {officeBusy ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
-          {officeAction === 'capturing' ? 'Reading office GPS…' : officeAction === 'saving' ? 'Saving office location…' : 'Save current location as office pin'}
+          {officeAction === 'capturing' ? 'Reading office GPS…' : officeAction === 'saving' ? 'Saving office location…' : 'Preview current location as office pin'}
         </button>
-        <p id="save-office-gps-help" className="sa-office-form-help">Use this while standing at {office.name}. A reading of ±{DIRECT_SAVE_ACCURACY_M} m or better saves directly. Readings up to ±{OFFICE_CAPTURE_ACCURACY_M} m can be reviewed on the map before saving.</p>
+        <p id="save-office-gps-help" className="sa-office-form-help">Use this while standing at {office.name}. Review the proposed pin on the map and select Confirm and save office pin to change the saved location.</p>
       </>}
       {officeNotice && <p role="status" className="sa-info">{officeNotice}</p>}
       {(gpsError || lowAccuracy || verified && !inside) && <div className="sa-info"><div>{gpsError && <p role="alert" className="sa-error sa-gps-error">{gpsError}</p>}<strong>Improve location accuracy</strong><ol className="sa-gps-help"><li>Allow location for this site and enable precise location in your device settings.</li><li>Try a GPS-capable phone. Computer location can be less precise.</li><li>Move near a window or outdoors, then press Refresh my location.</li><li>Open the geographic map and check whether the saved office pin is on your building. Change it only if the saved office location is wrong.</li></ol></div></div>}

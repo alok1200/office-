@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { ATTENDANCE_RADIUS_M } from '../../services/geofenceStatus';
+import { ATTENDANCE_RADIUS_M, attendanceLocationFailure } from '../../services/geofenceStatus';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
 import { StatusBadge } from '../Common/StatusBadge';
 import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+
+const punchLabels = { CHECK_IN: 'Check-in', CHECK_OUT: 'Check-out', START_BREAK: 'Break start', END_BREAK: 'Break end' };
 
 export function PunchControls({ todayData, onRefresh, loading = false }) {
   const { currentUserId, isSuperAdmin } = useAuth();
@@ -34,7 +36,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     let punchSubmitted = false;
     try {
       const allowWifi = ['CHECK_LOCATION', 'CHECK_IN', 'CHECK_OUT'].includes(action);
-      const { message: locationMessage, ...location } = await geofence.checkLocation({ allowWifi });
+      const { message: locationMessage, location, gpsSummary } = await geofence.checkLocation({ allowWifi });
       if (action === 'CHECK_LOCATION') {
         setMessage(locationMessage);
         return;
@@ -44,17 +46,24 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       const res = await api.recordPunch(currentUserId, action, location);
       const latest = await onRefresh();
       if (res.success) {
-        setMessage(res.message || `Successfully recorded ${action.replace('_', ' ')}`);
+        setMessage(res.verification_method === 'OFFICE_WIFI'
+          ? [res.message, gpsSummary].filter(Boolean).join(' ')
+          : `${punchLabels[action]} recorded using GPS.`);
       } else {
-        const failure = res.message || res.error || 'Failed to record punch';
+        const responseMessage = res.message || res.error || 'Could not record attendance. Please retry.';
+        const failure = typeof res.office_wifi_matched === 'boolean'
+          ? attendanceLocationFailure(res, { code: res.error, message: responseMessage }, allowWifi).message
+          : responseMessage;
         setError(latest && latest.current_state !== currentState
           ? `${failure} Your attendance status and available actions have refreshed.`
           : failure);
       }
     } catch (err) {
       if (punchSubmitted) await onRefresh();
-      const failure = err.message || 'Could not verify your location. Please retry.';
-      setError(err.code === 'LOW_ACCURACY' && action !== 'CHECK_LOCATION'
+      const failure = err instanceof TypeError && punchSubmitted
+        ? 'The connection was interrupted. Check your attendance status before retrying.'
+        : err.message || 'Could not verify your location. Please retry.';
+      setError(!punchSubmitted && ['CHECK_IN', 'CHECK_OUT'].includes(action) && (err.code?.startsWith('GPS_') || err.code === 'LOW_ACCURACY')
         ? `${failure} If you miss a punch, submit an Attendance Regularization request from My Requests.`
         : failure);
     } finally {
@@ -109,7 +118,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
 
       {/* Messages */}
       {message && (
-        <div className="mt-4 p-3.5 rounded-xl bg-white border border-blue-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs">
+        <div role="status" className="mt-4 p-3.5 rounded-xl bg-white border border-blue-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs">
           <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="font-semibold">{message}</span>
         </div>
