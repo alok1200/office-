@@ -33,7 +33,8 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
 
     let punchSubmitted = false;
     try {
-      const { message: locationMessage, ...location } = await geofence.checkLocation();
+      const allowWifi = ['CHECK_LOCATION', 'CHECK_IN', 'CHECK_OUT'].includes(action);
+      const { message: locationMessage, ...location } = await geofence.checkLocation({ allowWifi });
       if (action === 'CHECK_LOCATION') {
         setMessage(locationMessage);
         return;
@@ -73,7 +74,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
           <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
-            Your location is verified when you press an attendance button. You must be within {ATTENDANCE_RADIUS_M} m of the saved office.
+            GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'When GPS is unavailable or too coarse, registered office Wi-Fi can verify check-in and check-out.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -85,6 +86,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       {canRecord && (
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           {geofence.office?.name && <p className="text-xs text-slate-600">{geofence.office.name} · GPS accuracy must be ±{geofence.office.max_accuracy_m} m or better</p>}
+          {geofence.office?.office_wifi_matched && <p className="text-xs font-semibold text-blue-700">Office Wi-Fi matched</p>}
           <button
             type="button"
             className="text-xs font-bold text-blue-700 underline disabled:opacity-50"

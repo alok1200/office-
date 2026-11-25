@@ -141,7 +141,7 @@ export function GeofenceCard({ resource, setTab }) {
       </div>
       {verified && !inside && !locating && <p className="sa-info" role="status">GPS places you {formatGpsDistance(gps.distance)} from the saved office pin. Check the geographic map before updating the pin.</p>}
       {gpsProgress && <p role="status" className="sa-info">{gpsProgress}</p>}
-      <div className="sa-info"><Info size={13} /><span>{office ? <>The office location stays fixed. GPS updates only your orange marker. All attendance actions require employees to be within <strong>{ATTENDANCE_RADIUS_M} m</strong> with reported GPS accuracy within the configured ±{office.max_accuracy_m || 50} m limit. Accuracy does not increase the {ATTENDANCE_RADIUS_M} m boundary. </> : <>Set your office location to enable distance checks. </>}Location is never shared with teammates.</span></div>
+      <div className="sa-info"><Info size={13} /><span>{office ? <>GPS verification uses the <strong>{ATTENDANCE_RADIUS_M} m</strong> boundary and this office’s ±{office.max_accuracy_m || 50} m accuracy limit. {office.wifi_attendance_enabled && 'Registered office Wi-Fi is a fallback for check-in and check-out. '}</> : <>Set your office location to enable distance checks. </>}Location is never shared with teammates.</span></div>
       {office && <>
         <button type="button" className="sa-location-button" aria-describedby="save-office-gps-help" onClick={() => updateCompanyLocation()} disabled={officeBusy || locating}>
           {officeBusy ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}

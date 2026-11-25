@@ -5,6 +5,8 @@ import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
 import { useDataRefresh } from './useDataRefresh';
 
+const wifiFallbackErrors = new Set(['GPS_UNAVAILABLE', 'GPS_TIMEOUT', 'GPS_PERMISSION_DENIED', 'GPS_INSECURE_CONTEXT', 'GPS_POLICY_BLOCKED', 'LOW_ACCURACY']);
+
 export function useOfficeGeofence(enabled) {
   const { currentUserId } = useAuth();
   const [officeState, setOfficeState] = useState(null);
@@ -48,7 +50,7 @@ export function useOfficeGeofence(enabled) {
 
   const savedOffice = officeState?.userId === currentUserId ? officeState : null;
 
-  const checkLocation = async () => {
+  const checkLocation = async ({ allowWifi = false } = {}) => {
     const active = session.current;
     if (!enabled || active?.userId !== currentUserId || document.visibilityState !== 'visible') {
       throw new Error('Keep the attendance page open and retry the location check.');
@@ -81,11 +83,18 @@ export function useOfficeGeofence(enabled) {
           office = latest.office;
         })
         : Promise.resolve();
-      const [location] = await Promise.all([reading, officeRefresh]);
+      const [outcome] = await Promise.all([reading.then(location => ({ location }), error => ({ error })), officeRefresh]);
       if (!isCurrent() || document.visibilityState !== 'visible') {
         throw new Error('The location check was cancelled. Please retry.');
       }
+      if (outcome.error) {
+        if (allowWifi && office.office_wifi_matched && wifiFallbackErrors.has(outcome.error.code)) {
+          return { message: `Connected to the registered network for ${office.name}. Check-in and check-out are available over office Wi-Fi.` };
+        }
+        throw outcome.error;
+      }
 
+      const { location } = outcome;
       const evaluation = evaluateLocation(office, location);
       if (!evaluation.eligible) throw new Error(evaluation.message);
 

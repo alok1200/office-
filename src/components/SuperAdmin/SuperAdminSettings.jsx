@@ -13,6 +13,8 @@ const tabs = [['users', 'Users', Users], ['offices', 'Offices', Building2], ['sh
 function OfficeForm({ office, data, onClose, onSaved }) {
   const { currentUserId } = useAuth();
   const [form, setForm] = useState({ name: office?.name || '', latitude: office?.latitude ?? '', longitude: office?.longitude ?? '', radius_m: ATTENDANCE_RADIUS_M, max_accuracy_m: attendanceAccuracyLimit(office?.max_accuracy_m), timezone: office?.timezone || 'Asia/Kolkata', address: office?.address || '' });
+  const [officeIps, setOfficeIps] = useState(office?.office_ips?.join('\n') ?? '');
+  const [wifiEnabled, setWifiEnabled] = useState(office?.wifi_attendance_enabled ?? false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [locating, setLocating] = useState(false);
@@ -75,7 +77,8 @@ function OfficeForm({ office, data, onClose, onSaved }) {
     try {
       const res = await api.saveAdminOffice(currentUserId, office?.id, {
         ...form,
-        office_ips: office?.office_ips || [],
+        office_ips: officeIps,
+        wifi_attendance_enabled: wifiEnabled,
         user_ids: office?.user_ids || [],
         is_primary: office?.is_primary || !data.offices.length,
       });
@@ -84,7 +87,7 @@ function OfficeForm({ office, data, onClose, onSaved }) {
     } catch (error) { setError(error.message); }
     finally { busy.current = false; if (mounted.current) setSaving(false); }
   };
-  return <div className="sa-request-overlay" onClick={e => { if (e.target === e.currentTarget) close(); }}><section ref={panel} tabIndex={-1} className="sa-request-dialog sa-office-dialog" role="dialog" aria-modal="true" aria-labelledby="sa-office-form-title"><button className="sa-dialog-close" onClick={close} disabled={saving} aria-label="Close office form"><X size={21} /></button><h2 id="sa-office-form-title">{office ? 'Edit office' : 'Add office'}</h2><p>Configure the office details and GPS geofence.</p>
+  return <div className="sa-request-overlay" onClick={e => { if (e.target === e.currentTarget) close(); }}><section ref={panel} tabIndex={-1} className="sa-request-dialog sa-office-dialog" role="dialog" aria-modal="true" aria-labelledby="sa-office-form-title"><button className="sa-dialog-close" onClick={close} disabled={saving} aria-label="Close office form"><X size={21} /></button><h2 id="sa-office-form-title">{office ? 'Edit office' : 'Add office'}</h2><p>Configure GPS and office Wi-Fi attendance.</p>
     <form onSubmit={save}>{error && <p role="alert" className="sa-request-error">{error}</p>}
       <label htmlFor="sa-office-name">Office name</label><input id="sa-office-name" value={form.name} onChange={e => change('name', e.target.value)} required maxLength={150} disabled={saving} />
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
@@ -93,7 +96,11 @@ function OfficeForm({ office, data, onClose, onSaved }) {
       {showPinMap && <div id="office-pin-map"><GeofenceMapPanel office={form} onOfficePick={pickOfficePoint} disabled={saving || locating} /></div>}
       {captureNotice && <p className="sa-office-capture-notice" role="status">{captureNotice}</p>}
       <div className="sa-request-dates"><div><label htmlFor="sa-office-radius">Radius (metres)</label><input id="sa-office-radius" type="number" value={ATTENDANCE_RADIUS_M} readOnly aria-describedby="office-radius-help" /></div><div><label htmlFor="sa-office-accuracy">Maximum GPS accuracy (metres)</label><input id="sa-office-accuracy" type="number" min={1} max={MAX_ATTENDANCE_ACCURACY_M} step={1} value={form.max_accuracy_m} onChange={e => change('max_accuracy_m', e.target.value)} required disabled={saving} /></div></div>
-      <p id="office-radius-help" className="sa-office-form-help">Attendance requires a reported position within {ATTENDANCE_RADIUS_M} m of the saved pin. Set this office’s GPS accuracy limit separately, up to ±{MAX_ATTENDANCE_ACCURACY_M} m. To place the pin, use accurate GPS, select the building on the map, or enter verified coordinates. Then press Save office.</p>
+      <p id="office-radius-help" className="sa-office-form-help">GPS verification requires a reported position within {ATTENDANCE_RADIUS_M} m of the saved pin. Set this office’s GPS accuracy limit separately, up to ±{MAX_ATTENDANCE_ACCURACY_M} m.</p>
+      <label htmlFor="sa-office-wifi-ips">Office Wi-Fi IP addresses or subnets</label>
+      <textarea id="sa-office-wifi-ips" rows={3} value={officeIps} onChange={e => setOfficeIps(e.target.value)} placeholder="192.168.1.0/24" disabled={saving} aria-describedby="sa-office-wifi-help" />
+      <p id="sa-office-wifi-help" className="sa-office-form-help">Enter one address or subnet per line. Use the private subnet assigned by your office router to cover devices on that network. Your current connection IP is {data.connection_ip || 'unavailable'}.</p>
+      <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in and check-out over office Wi-Fi when GPS is unavailable</label>
       <label htmlFor="sa-office-zone">Timezone</label><input id="sa-office-zone" list="sa-office-timezones" value={form.timezone} onChange={e => change('timezone', e.target.value)} required disabled={saving} /><datalist id="sa-office-timezones">{['Asia/Kolkata', 'UTC', 'Asia/Dubai', 'Europe/London', 'America/New_York'].map(zone => <option key={zone} value={zone} />)}</datalist>
       <label htmlFor="sa-office-address">Address</label><input id="sa-office-address" value={form.address} onChange={e => change('address', e.target.value)} maxLength={500} disabled={saving} />
       <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={close} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving || locating}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Saving…' : 'Save office'}</button></div>
