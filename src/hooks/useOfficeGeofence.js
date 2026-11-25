@@ -48,6 +48,19 @@ export function useOfficeGeofence(enabled) {
 
   const savedOffice = officeState?.userId === currentUserId ? officeState : null;
 
+  const checkOfficeWifi = async () => {
+    const result = await loadOffice();
+    if (!result) throw new Error('The office Wi-Fi check was cancelled. Please retry.');
+    if (!result.office) throw new Error(result.error || 'Your office has not been configured. Contact your administrator.');
+
+    const { office } = result;
+    const status = officeWifiMessage(office);
+    const connection = office.office_connection_ip ? `The server sees your connection as ${office.office_connection_ip}.` : 'The server could not read your connection IP.';
+    const message = `${status} ${connection}`;
+    if (!office.office_wifi_matched) throw new Error(message);
+    return message;
+  };
+
   const checkLocation = async ({ allowWifi = false } = {}) => {
     const active = session.current;
     if (!enabled || active?.userId !== currentUserId || document.visibilityState !== 'visible') {
@@ -108,6 +121,7 @@ export function useOfficeGeofence(enabled) {
     office: savedOffice?.office,
     loading: enabled && !savedOffice,
     progress,
+    checkOfficeWifi,
     checkLocation
   };
 }

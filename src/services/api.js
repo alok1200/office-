@@ -127,7 +127,7 @@ export const api = {
     return res.json();
   },
   getOfficeLocation: async () => {
-    const res = await appFetch(`${API_BASE}/office-location`, { headers: getHeaders(localStorage.getItem('knooviq_user_id')) });
+    const res = await appFetch(`${API_BASE}/office-location`, { headers: getHeaders(localStorage.getItem('knooviq_user_id')), cache: 'no-store' });
     return res.json();
   },
   updateOfficeLocation: async (payload) => {

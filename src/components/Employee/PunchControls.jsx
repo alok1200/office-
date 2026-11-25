@@ -35,6 +35,10 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
 
     let punchSubmitted = false;
     try {
+      if (action === 'CHECK_WIFI') {
+        setMessage(await geofence.checkOfficeWifi());
+        return;
+      }
       const allowWifi = ['CHECK_LOCATION', 'CHECK_IN', 'CHECK_OUT'].includes(action);
       const { message: locationMessage, location, gpsSummary } = await geofence.checkLocation({ allowWifi });
       if (action === 'CHECK_LOCATION') {
@@ -105,6 +109,9 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
           >
             Check my location
           </button>
+          <button type="button" className="text-xs font-bold text-blue-700 underline disabled:opacity-50" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
+            Check office Wi-Fi
+          </button>
         </div>
       )}
       {canRecord && geofence.loading && <p role="status" className="mt-2 text-sm text-slate-600">Loading your office…</p>}
@@ -112,7 +119,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <p role="status" className="mt-2 text-sm text-slate-600">
           {geofence.progress !== null
             ? `Checking your location (GPS accuracy ±${Math.round(geofence.progress)} m)…`
-            : loadingAction === 'CHECK_LOCATION' ? 'Checking your location…' : 'Verifying your location and recording attendance…'}
+            : loadingAction === 'CHECK_WIFI' ? 'Checking your office network…' : loadingAction === 'CHECK_LOCATION' ? 'Checking your location…' : 'Verifying your location and recording attendance…'}
         </p>
       )}
 
