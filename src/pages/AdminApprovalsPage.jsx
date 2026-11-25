@@ -5,7 +5,9 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { displayRequestDate, requestDate } from '../components/SuperAdmin/PersonalRequestForm';
 
-export function AdminApprovalsPage() {
+const punchTime = value => value ? new Date(value).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' }) : '—';
+
+export function AdminApprovalsPage({ setTab }) {
   const { currentUserId } = useAuth();
   const [resource, setResource] = useState({ loading: true, rows: [], error: '' });
   const [review, setReview] = useState(null);
@@ -16,6 +18,7 @@ export function AdminApprovalsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [actionError, setActionError] = useState('');
+  const [conflicts, setConflicts] = useState([]);
   const refresh = useCallback(async () => {
     setResource(old => ({ ...old, loading: true, error: '' }));
     try {
@@ -27,6 +30,7 @@ export function AdminApprovalsPage() {
   useEffect(() => { refresh(); }, [refresh]);
   useDataRefresh(refresh,['requests'],{enabled:!saving&&!review});
   const beginReview = (row, status) => {
+    setConflicts([]);
     setReview({ row, status }); setNote(''); setCategory(row.metadata?.category || ''); setCheckIn(row.metadata?.proposed_correction?.check_in ? new Date(row.metadata.proposed_correction.check_in).toLocaleTimeString('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}) : ''); setCheckOut(row.metadata?.proposed_correction?.check_out ? new Date(row.metadata.proposed_correction.check_out).toLocaleTimeString('en-GB',{timeZone:'Asia/Kolkata',hour:'2-digit',minute:'2-digit'}) : ''); setMessage(''); setActionError('');
   };
   const isStatusTicket = Boolean(review?.row.metadata?.requested_status);
@@ -35,7 +39,7 @@ export function AdminApprovalsPage() {
   const submit = async event => {
     event.preventDefault();
     if (saving || (!isStatusTicket && note.trim().length < 5)) return;
-    setSaving(true); setActionError('');
+    setSaving(true); setActionError(''); setConflicts([]);
     try {
       const payload = { status: review.status, note: note.trim(), ...(needsCategory ? { category } : {}) };
       if (regularizing) {
@@ -43,7 +47,11 @@ export function AdminApprovalsPage() {
         payload.correction = { check_in: new Date(`${day}T${checkIn}:00+05:30`).toISOString(), check_out: new Date(`${day}T${checkOut}:00+05:30`).toISOString() };
       }
       const res = await api.reviewSuperAdminRequest(currentUserId, review.row.id, payload);
-      if (!res.success) throw new Error(res.error || 'Could not save the decision.');
+      if (!res.success) {
+        setConflicts(res.attendance_conflicts || []);
+        setActionError(res.error || 'Could not save the decision.');
+        return;
+      }
       setMessage(res.message); setReview(null); await refresh();
     } catch (error) { setActionError(error.message); }
     finally { setSaving(false); }
@@ -61,6 +69,16 @@ export function AdminApprovalsPage() {
         {regularizing && <><p>Review the corrected times for {displayRequestDate(row.start_date)}. Times are in IST. Existing breaks must fit within these times.</p><div className="sa-review-time-grid"><label>Check in (IST)<input type="time" required value={checkIn} onChange={e => setCheckIn(e.target.value)} disabled={saving} /></label><label>Check out (IST)<input type="time" required value={checkOut} onChange={e => setCheckOut(e.target.value)} disabled={saving} /></label></div></>}
         <label>{isStatusTicket ? 'Review note (optional)' : 'Review note (5–1000 characters)'}<textarea value={note} onChange={e => setNote(e.target.value)} minLength={isStatusTicket ? 0 : 5} maxLength={1000} required={!isStatusTicket} rows={2} disabled={saving} placeholder="Explain your decision…" autoFocus /></label>
         {actionError && <p className="sa-request-error" role="alert">{actionError}</p>}
+        {conflicts.length > 0 && <div className="sa-info flex-col">
+          <p><strong>Conflicting attendance (IST)</strong></p>
+          <ul className="my-2 space-y-1">
+            {conflicts.map(conflict => <li key={conflict.work_date}>
+              <strong>{displayRequestDate(conflict.work_date)}</strong> · In {punchTime(conflict.check_in)} · Out {punchTime(conflict.check_out)} · {conflict.current_state.replaceAll('_', ' ').toLowerCase()}
+            </li>)}
+          </ul>
+          <p>If the punches are correct, leave can be requested for the remaining dates.</p>
+          {setTab && <button type="button" className="sa-text-button" onClick={() => setTab('hr-attendance')}>Open attendance reports</button>}
+        </div>}
         <div className="sa-review-buttons"><button className={review.status === 'APPROVED' ? 'sa-request-primary' : 'sa-reject-button'} type="submit" disabled={saving || (!isStatusTicket && note.trim().length < 5) || (needsCategory && !category) || (regularizing && (!checkIn || !checkOut))}>{saving ? 'Saving…' : review.status === 'APPROVED' ? 'Confirm approval' : 'Confirm rejection'}</button><button type="button" onClick={() => setReview(null)} disabled={saving}>Go back</button></div>
       </form>}
     </article>)}</div>}

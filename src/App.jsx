@@ -117,7 +117,7 @@ function AppContent() {
       case 'office-location':
         return <SuperAdminSettings key="offices" setTab={setCurrentTab} />;
       case 'admin-approvals':
-        return <AdminApprovalsPage />;
+        return <AdminApprovalsPage setTab={setCurrentTab} />;
       case 'payroll-dashboard':
         return <PayrollDashboardPage setTab={setCurrentTab} />;
       case 'payroll-salaries':
