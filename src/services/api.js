@@ -45,11 +45,15 @@ export const api = {
       return { success: true };
     }
   },
-  getCurrentUser: async (userId) => {
+  getCurrentUser: async () => {
     const res = await appFetch(`${API_BASE}/auth/me`, {
-      headers: getHeaders(userId)
+      headers: getHeaders()
     });
-    return res.json();
+    if (res.status === 401 || res.status === 403) return null;
+    if (!res.ok) throw new Error('Could not verify your session. Check your connection and try again.');
+    const data = await res.json();
+    if (!data.success || !data.user) throw new Error('Could not verify your session. Please try again.');
+    return data.user;
   },
 
   getAdminOffices: async (userId, signal) => {
@@ -330,8 +334,8 @@ export const api = {
     const res = await appFetch(`${API_BASE}/payroll/bank-accounts/${employeeId}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(payload) });
     return res.json();
   },
-  previewMonthlyPayroll: async (filters) => {
-    const res = await appFetch(`${API_BASE}/payroll/periods/preview?${new URLSearchParams(filters)}`, { headers: getHeaders() });
+  previewMonthlyPayroll: async (filters, signal) => {
+    const res = await appFetch(`${API_BASE}/payroll/periods/preview?${new URLSearchParams(filters)}`, { headers: getHeaders(), signal });
     return res.json();
   },
   generateMonthlyPayroll: async (payload) => {

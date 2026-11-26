@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Calculator, RefreshCw, Play, AlertCircle, CheckCircle2, Download, Search } from 'lucide-react';
 import { api } from '../../services/api';
 import { MONTHS, currentIndiaYearMonth, formatINR, payrollStatusTone, periodLabel } from './payrollFormat';
@@ -8,27 +8,39 @@ export function MonthlySalaryCalculationPage() {
   const [year, setYear] = useState(initial.year);
   const [month, setMonth] = useState(initial.month);
   const [search, setSearch] = useState('');
-  const [preview, setPreview] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [result, setResult] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await api.previewMonthlyPayroll({ year, month });
-      if (!res.success) throw new Error(res.error || 'Could not calculate monthly payroll.');
-      setPreview(res.data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [year, month]);
+  const requestKey = `${year}-${month}-${revision}`;
+  const currentResult = result?.key === requestKey ? result : null;
+  const preview = currentResult?.data;
+  const loading = !currentResult;
+  const displayedError = error || currentResult?.error;
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const controller = new AbortController();
+    api.previewMonthlyPayroll({ year, month }, controller.signal)
+      .then(response => {
+        if (!response.success) throw new Error(response.error || 'Could not calculate monthly payroll.');
+        if (!controller.signal.aborted) setResult({ key: requestKey, data: response.data });
+      })
+      .catch(err => {
+        if (!controller.signal.aborted) setResult({ key: requestKey, error: err.message });
+      });
+    return () => controller.abort();
+  }, [year, month, requestKey]);
+
+  const refresh = () => setRevision(value => value + 1);
+
+  const changePeriod = (setValue, value) => {
+    setValue(Number(value));
+    setError('');
+    setNotice('');
+    refresh();
+  };
 
   const handleGenerate = async () => {
     setBusy('generate');
@@ -38,7 +50,7 @@ export function MonthlySalaryCalculationPage() {
       const res = await api.generateMonthlyPayroll({ year, month });
       if (!res.success) throw new Error(res.error || 'Could not generate payroll.');
       setNotice(res.message);
-      await load();
+      refresh();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -86,17 +98,17 @@ export function MonthlySalaryCalculationPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <select value={month} onChange={e => setMonth(Number(e.target.value))} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white">
+          <select aria-label="Month" value={month} disabled={Boolean(busy)} onChange={e => changePeriod(setMonth, e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white">
             {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
           </select>
-          <select value={year} onChange={e => setYear(Number(e.target.value))} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white">
+          <select aria-label="Year" value={year} disabled={Boolean(busy)} onChange={e => changePeriod(setYear, e.target.value)} className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold bg-white">
             {[year - 1, year, year + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
           <div className="relative">
             <input type="text" placeholder="Filter employee..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold bg-white" />
             <Search className="w-3.5 h-3.5 text-blue-600 absolute left-2.5 top-2.5" />
           </div>
-          <button type="button" onClick={load} className="ui-icon-button" aria-label="Recalculate">
+          <button type="button" onClick={() => { setError(''); refresh(); }} disabled={loading || Boolean(busy)} className="ui-icon-button" aria-label="Recalculate">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -108,10 +120,10 @@ export function MonthlySalaryCalculationPage() {
           <span>{notice}</span>
         </div>
       )}
-      {error && (
+      {displayedError && (
         <div role="alert" className="p-3.5 rounded-xl border border-rose-300 bg-white text-xs font-semibold text-rose-700 flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{error}</span>
+          <span>{displayedError}</span>
         </div>
       )}
 
@@ -137,7 +149,7 @@ export function MonthlySalaryCalculationPage() {
           <div>
             <span className="text-slate-500 font-bold block">Status</span>
             <span className={`inline-block mt-0.5 px-2.5 py-0.5 rounded-full border text-[11px] font-bold ${payrollStatusTone(existing?.status || 'PREVIEW')}`}>
-              {existing?.status || 'NOT GENERATED'}
+              {loading ? 'LOADING' : existing?.status || (preview ? 'NOT GENERATED' : 'UNAVAILABLE')}
             </span>
           </div>
           <div>
@@ -192,7 +204,7 @@ export function MonthlySalaryCalculationPage() {
             {loading ? (
               <tr><td colSpan="9" className="px-4 py-8 text-center text-slate-500">Calculating monthly salaries…</td></tr>
             ) : !filteredRows.length ? (
-              <tr><td colSpan="9" className="px-4 py-8 text-center text-slate-500">No eligible employees for this period.</td></tr>
+              <tr><td colSpan="9" className="px-4 py-8 text-center text-slate-500">{preview ? 'No matching employees for this period.' : 'Payroll preview unavailable.'}</td></tr>
             ) : filteredRows.map(r => (
               <tr key={r.employee_id} className="hover:bg-blue-50/30">
                 <td className="px-4 py-3.5 font-black text-black">{r.employee_name}</td>

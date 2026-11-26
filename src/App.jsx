@@ -56,11 +56,6 @@ function AppContent() {
     );
   }
 
-  // If user is not authenticated, render the secure Login Page
-  if (!isAuthenticated) {
-    return <LoginPage />;
-  }
-
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white p-4">
@@ -76,6 +71,10 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
   }
 
   const renderPage = () => {

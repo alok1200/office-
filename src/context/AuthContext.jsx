@@ -4,6 +4,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   useEffect(() => {
     const token = localStorage.getItem('knooviq_auth_token');
     if (!token) {
@@ -12,10 +13,10 @@ export function AuthProvider({ children }) {
     }
     let cancelled = false;
     api.getCurrentUser()
-      .then((res) => {
+      .then((user) => {
         if (cancelled) return;
-        if (res?.success && res.user) {
-          setCurrentUser(res.user);
+        if (user) {
+          setCurrentUser(user);
         } else {
           localStorage.removeItem('knooviq_auth_token');
           localStorage.removeItem('knooviq_user_id');
@@ -24,9 +25,7 @@ export function AuthProvider({ children }) {
       })
       .catch(() => {
         if (cancelled) return;
-        localStorage.removeItem('knooviq_auth_token');
-        localStorage.removeItem('knooviq_user_id');
-        setCurrentUser(null);
+        setError('Could not verify your session. Check your connection and try again.');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -47,7 +46,7 @@ export function AuthProvider({ children }) {
     try { await api.logout(); }
     finally { localStorage.removeItem('knooviq_auth_token'); localStorage.removeItem('knooviq_user_id'); setCurrentUser(null); }
   };
-  const value = { currentUser, currentUserId: currentUser?.id, isAuthenticated: !!currentUser, loading, error: null, login, logout, isHR: currentUser?.role === 'HR_ADMIN', isEmployee: currentUser?.role === 'EMPLOYEE', isSuperAdmin: currentUser?.role === 'SUPER_ADMIN', role: currentUser?.role || null };
+  const value = { currentUser, currentUserId: currentUser?.id, isAuthenticated: !!currentUser, loading, error, login, logout, isHR: currentUser?.role === 'HR_ADMIN', isEmployee: currentUser?.role === 'EMPLOYEE', isSuperAdmin: currentUser?.role === 'SUPER_ADMIN', role: currentUser?.role || null };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 export function useAuth() {
