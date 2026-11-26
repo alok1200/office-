@@ -39,8 +39,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         setMessage(await geofence.checkOfficeWifi());
         return;
       }
-      const allowWifi = ['CHECK_LOCATION', 'CHECK_IN', 'CHECK_OUT'].includes(action);
-      const { message: locationMessage, location, gpsSummary } = await geofence.checkLocation({ allowWifi });
+      const { message: locationMessage, location, gpsSummary } = await geofence.checkLocation({ preferWifi: action !== 'CHECK_LOCATION' });
       if (action === 'CHECK_LOCATION') {
         setMessage(locationMessage);
         return;
@@ -56,7 +55,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       } else {
         const responseMessage = res.message || res.error || 'Could not record attendance. Please retry.';
         const failure = typeof res.office_wifi_matched === 'boolean'
-          ? attendanceLocationFailure(res, { code: res.error, message: responseMessage }, allowWifi).message
+          ? attendanceLocationFailure(res, { code: res.error, message: responseMessage }).message
           : responseMessage;
         setError(latest && latest.current_state !== currentState
           ? `${failure} Your attendance status and available actions have refreshed.`
@@ -87,7 +86,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div>
           <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
           <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
-            GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'When GPS is unavailable or too coarse, registered office Wi-Fi can verify check-in and check-out.'}
+            GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.'}
           </p>
         </div>
         <div className="flex items-center gap-2">

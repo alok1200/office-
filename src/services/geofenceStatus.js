@@ -19,13 +19,12 @@ export function officeWifiMessage(office) {
   return 'Office Wi-Fi could not be verified.';
 }
 
-export function attendanceLocationFailure(office, { code, message }, allowWifi) {
+export function attendanceLocationFailure(office, { code, message }) {
   const gpsSummary = gpsFallbackMessages[code];
   if (!gpsSummary && code !== 'OUTSIDE_GEOFENCE') return { message };
-  if (!allowWifi) return { message: `${message} Breaks require GPS.` };
   const wifi = officeWifiMessage(office);
   if (gpsSummary && office.wifi_attendance_enabled && office.office_wifi_matched) {
-    return { fallback: true, gpsSummary, message: `${gpsSummary} ${wifi} You can check in or out using office Wi-Fi.` };
+    return { fallback: true, gpsSummary, message: `${gpsSummary} ${wifi} You can record attendance using office Wi-Fi.` };
   }
   const wifiHelp = gpsSummary && office.wifi_attendance_enabled ? ' Connect to your registered office network and retry.' : '';
   return { message: `${message} ${wifi}${wifiHelp}` };

@@ -67,7 +67,7 @@ export function useOfficeGeofence(enabled) {
     return message;
   };
 
-  const checkLocation = async ({ allowWifi = false } = {}) => {
+  const checkLocation = async ({ preferWifi = false } = {}) => {
     const active = session.current;
     if (!enabled || active?.userId !== currentUserId || document.visibilityState !== 'visible') {
       throw new Error('Keep the attendance page open and retry the location check.');
@@ -81,10 +81,12 @@ export function useOfficeGeofence(enabled) {
     setProgress(null);
     try {
       // Use the preloaded office so GPS can start directly from the employee's click.
-      const result = savedOffice?.office ? savedOffice : await loadOffice();
+      const canUseSavedOffice = savedOffice?.office && !(preferWifi && savedOffice.office.wifi_attendance_enabled);
+      const result = canUseSavedOffice ? savedOffice : await loadOffice();
       if (!isCurrent()) throw new Error('The location check was cancelled. Please retry.');
       if (!result?.office) throw new Error(result?.error || 'Your office has not been configured. Contact your administrator.');
       let office = result.office;
+      if (preferWifi && office.wifi_attendance_enabled && office.office_wifi_matched) return { location: {} };
 
       const reading = readCurrentLocation({
         maximumAccuracy: attendanceAccuracyLimit(office.max_accuracy_m),
@@ -107,7 +109,7 @@ export function useOfficeGeofence(enabled) {
       const { location } = outcome;
       const evaluation = outcome.error || evaluateLocation(office, location);
       if (!evaluation.eligible) {
-        const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation, allowWifi);
+        const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation);
         if (fallback) return { location: {}, message, gpsSummary };
         throw Object.assign(new Error(message), { code: evaluation.code });
       }

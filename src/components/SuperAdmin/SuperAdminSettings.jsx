@@ -1,6 +1,6 @@
 import {useDataRefresh} from '../../hooks/useDataRefresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Building2, Clock3, CalendarDays, Loader2, MapPin, Pencil, Plus, RefreshCw, Trash2, Users, X } from 'lucide-react';
+import { Building2, Clock3, CalendarDays, Loader2, MapPin, Pencil, Plus, RefreshCw, Trash2, Users, Wifi, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { ATTENDANCE_RADIUS_M, MAX_ATTENDANCE_ACCURACY_M, attendanceAccuracyLimit } from '../../services/geofenceStatus';
 import { api } from '../../services/api';
@@ -67,6 +67,12 @@ function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
     finally { clearTimeout(timeout); capturing.current = false; captureRequest.current = null; if (mounted.current) setLocating(false); }
   };
   const locate = () => capture();
+  const useDetectedNetwork = () => {
+    const subnet = data.connection_subnet;
+    setOfficeIps(old => old.split(/[\s,;]+/).includes(subnet) ? old : [old.trim(), subnet].filter(Boolean).join('\n'));
+    setWifiEnabled(true);
+    setError('');
+  };
   const pickOfficePoint = ({ latitude, longitude }) => {
     if (busy.current || capturing.current) return;
     setForm(old => ({ ...old, latitude: latitude.toFixed(6), longitude: longitude.toFixed(6) }));
@@ -96,10 +102,11 @@ function OfficeForm({ office, data, focusWifi, onClose, onSaved }) {
       <label htmlFor="sa-office-wifi-ips">Office Wi-Fi IP addresses or subnets</label>
       <textarea id="sa-office-wifi-ips" rows={3} value={officeIps} onChange={e => setOfficeIps(e.target.value)} placeholder="192.168.1.0/24" disabled={saving} aria-describedby="sa-office-wifi-help" />
       <p id="sa-office-wifi-help" className="sa-office-form-help">For the local app, enter the private subnet assigned by your office router. Enter one address or subnet per line.</p>
+      {data.connection_subnet && <button type="button" className="sa-office-location-action" onClick={useDetectedNetwork} disabled={saving}><Wifi size={14} />Use detected office subnet ({data.connection_subnet})</button>}
       <label htmlFor="sa-office-public-ip">Dedicated public IPv4 for the hosted app</label>
       <input id="sa-office-public-ip" value={publicIP} onChange={e => setPublicIP(e.target.value)} disabled={saving} maxLength={15} inputMode="decimal" aria-describedby="sa-office-public-ip-help" />
       <p id="sa-office-public-ip-help" className="sa-office-form-help">Use the static public IPv4 assigned to this office by your internet provider. The server sees your current connection IP as {data.connection_ip || 'unavailable'}.</p>
-      <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in and check-out over office Wi-Fi when GPS is unavailable</label>
+      <label><input type="checkbox" checked={wifiEnabled} onChange={e => setWifiEnabled(e.target.checked)} disabled={saving} /> Allow check-in, breaks, and check-out over registered office Wi-Fi</label>
       <div className="sa-request-dates"><div><label htmlFor="sa-office-lat">Latitude</label><input id="sa-office-lat" type="number" step="any" min={-90} max={90} value={form.latitude} onChange={e => change('latitude', e.target.value)} required disabled={saving || locating} /></div><div><label htmlFor="sa-office-lng">Longitude</label><input id="sa-office-lng" type="number" step="any" min={-180} max={180} value={form.longitude} onChange={e => change('longitude', e.target.value)} required disabled={saving || locating} /></div></div>
       <button type="button" className="sa-office-location-action" onClick={locate} disabled={saving || locating}>{locating ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}{locating ? 'Reading current location…' : 'Use my current location'}</button>
       <button type="button" className="sa-location-button" onClick={() => setShowPinMap(value => !value)} aria-expanded={showPinMap} aria-controls="office-pin-map" disabled={saving || locating}><MapPin size={15} />{showPinMap ? 'Hide office pin map' : 'Adjust office pin on map'}</button>
