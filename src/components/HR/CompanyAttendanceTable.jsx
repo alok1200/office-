@@ -1,4 +1,4 @@
-import {useDataRefresh} from '../../hooks/useDataRefresh';
+import { useDataRefresh } from '../../hooks/useDataRefresh';
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
@@ -10,9 +10,9 @@ export function CompanyAttendanceTable() {
   const { currentUserId } = useAuth();
   const [attendanceList, setAttendanceList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,setError]=useState('');
-  const sequence=useRef(0);
-  const [targetDate, setTargetDate] = useState(() => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Kolkata',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date()));
+  const [error, setError] = useState('');
+  const sequence = useRef(0);
+  const [targetDate, setTargetDate] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()));
   const [selectedDept, setSelectedDept] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -44,9 +44,9 @@ export function CompanyAttendanceTable() {
     }
   };
 
-  const fetchAttendance = async (silent=false) => {
-    const ticket=++sequence.current;
-    if(silent!==true){setLoading(true);setAttendanceList([]);}setError('');
+  const fetchAttendance = async (silent = false) => {
+    const ticket = ++sequence.current;
+    if (silent !== true) { setLoading(true); setAttendanceList([]); } setError('');
     try {
       const res = await api.getCompanyAttendance(currentUserId, {
         date: targetDate,
@@ -54,25 +54,25 @@ export function CompanyAttendanceTable() {
         status: selectedStatus,
         search: searchQuery
       });
-      if(ticket!==sequence.current)return;
-      if(!res.success)throw new Error(res.error || 'Could not load company attendance.');
+      if (ticket !== sequence.current) return;
+      if (!res.success) throw new Error(res.error || 'Could not load company attendance.');
       if (res.success && res.data) {
         setAttendanceList(res.data);
-        setInspectedRecord(old=>old?res.data.find(row=>row.employee_id===old.employee_id)||null:null);
+        setInspectedRecord(old => old ? res.data.find(row => row.employee_id === old.employee_id) || null : null);
       }
     } catch (err) {
-      if(ticket===sequence.current)setError(err.message || 'Could not load company attendance.');
+      if (ticket === sequence.current) setError(err.message || 'Could not load company attendance.');
     } finally {
-      if(ticket===sequence.current)setLoading(false);
+      if (ticket === sequence.current) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAttendance();
-    return ()=>{++sequence.current;};
+    return () => { ++sequence.current; };
   }, [currentUserId, targetDate, selectedDept, selectedStatus]);
 
-  useDataRefresh(()=>fetchAttendance(true),['attendance','requests','employees','holidays']);
+  useDataRefresh(() => fetchAttendance(true), ['attendance', 'requests', 'employees', 'holidays']);
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     fetchAttendance();
@@ -119,11 +119,11 @@ export function CompanyAttendanceTable() {
             className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-black font-bold focus:outline-none shadow-2xs"
           >
             <option value="ALL">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Human Resources">Human Resources</option>
-            <option value="Product & Design">Product & Design</option>
+            <option value="Software development">Software development</option>
+            <option value="Hr department">Hr department</option>
+            <option value="Digital marketing">Digital marketing</option>
+            <option value="Sales and distribution">Sales and distribution</option>
             <option value="Marketing">Marketing</option>
-            <option value="Finance & Operations">Finance & Operations</option>
           </select>
 
           {/* Status Filter */}
@@ -225,46 +225,46 @@ export function CompanyAttendanceTable() {
                 const breakCount = Array.isArray(row.breaks) ? row.breaks.length : 0;
                 const onBreak = row.current_state === 'ON_BREAK' || (Array.isArray(row.breaks) && row.breaks.some(b => !b.break_end));
                 return (
-                <tr key={`${row.emp_code || row.employee_id}-${row.work_date || targetDate}`} className="hover:bg-blue-50/30 transition-colors">
-                  <td className="px-4 py-3.5">
-                    <div className="font-black text-black">{row.first_name} {row.last_name}</div>
-                    <div className="text-[11px] text-slate-500 font-mono font-bold">{row.emp_code}</div>
-                  </td>
-                  <td className="px-4 py-3.5 text-black font-medium">{row.department_name}</td>
-                  <td className="px-4 py-3.5">
-                    <StatusBadge status={row.status} />
-                  </td>
-                  <td className="px-4 py-3.5 font-mono font-bold text-black">{formatTime(row.check_in)}</td>
-                  <td className="px-4 py-3.5 font-mono font-bold text-black">{formatTime(row.check_out)}</td>
-                  <td className="px-4 py-3.5 font-mono font-black text-black">
-                    {formatDuration(row.total_work_minutes)}
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-black text-black">
-                        {breakCount} {breakCount === 1 ? 'break' : 'breaks'}
-                      </span>
-                      {onBreak && (
-                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
-                          Active
+                  <tr key={`${row.emp_code || row.employee_id}-${row.work_date || targetDate}`} className="hover:bg-blue-50/30 transition-colors">
+                    <td className="px-4 py-3.5">
+                      <div className="font-black text-black">{row.first_name} {row.last_name}</div>
+                      <div className="text-[11px] text-slate-500 font-mono font-bold">{row.emp_code}</div>
+                    </td>
+                    <td className="px-4 py-3.5 text-black font-medium">{row.department_name}</td>
+                    <td className="px-4 py-3.5">
+                      <StatusBadge status={row.status} />
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-black">{formatTime(row.check_in)}</td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-black">{formatTime(row.check_out)}</td>
+                    <td className="px-4 py-3.5 font-mono font-black text-black">
+                      {formatDuration(row.total_work_minutes)}
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-black text-black">
+                          {breakCount} {breakCount === 1 ? 'break' : 'breaks'}
                         </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono font-bold text-slate-700">
-                    {formatDuration(row.total_break_minutes)}
-                  </td>
-                  <td className="px-4 py-3.5 text-right">
-                    <button
-                      onClick={() => setInspectedRecord(row)}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-black font-bold flex items-center gap-1.5 ml-auto transition-colors shadow-2xs"
-                      title="Inspect record details"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-blue-600" />
-                      <span>Details</span>
-                    </button>
-                  </td>
-                </tr>
+                        {onBreak && (
+                          <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3.5 font-mono font-bold text-slate-700">
+                      {formatDuration(row.total_break_minutes)}
+                    </td>
+                    <td className="px-4 py-3.5 text-right">
+                      <button
+                        onClick={() => setInspectedRecord(row)}
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-blue-50 text-black font-bold flex items-center gap-1.5 ml-auto transition-colors shadow-2xs"
+                        title="Inspect record details"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Details</span>
+                      </button>
+                    </td>
+                  </tr>
                 );
               })
             )}

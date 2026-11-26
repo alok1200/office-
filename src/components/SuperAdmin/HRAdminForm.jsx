@@ -3,7 +3,7 @@ import { Loader2, X } from 'lucide-react';
 import { api } from '../../services/api';
 
 export function HRAdminForm({ onClose, onSaved }) {
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', department_name: 'Human Resources', designation: 'HR Admin' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', department_name: 'Hr department', designation: 'HR Admin' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const panel = useRef(null), busy = useRef(false), mounted = useRef(true);

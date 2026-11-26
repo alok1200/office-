@@ -99,11 +99,11 @@ export function CompanyRequestsTable() {
             className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs text-black font-bold focus:outline-none shadow-2xs"
           >
             <option value="ALL">All Departments</option>
-            <option value="Engineering">Engineering</option>
-            <option value="Human Resources">Human Resources</option>
-            <option value="Product & Design">Product & Design</option>
+            <option value="Software development">Software development</option>
+            <option value="Hr department">Hr department</option>
+            <option value="Digital marketing">Digital marketing</option>
+            <option value="Sales and distribution">Sales and distribution</option>
             <option value="Marketing">Marketing</option>
-            <option value="Finance & Operations">Finance & Operations</option>
           </select>
 
           {/* Sort order toggle */}

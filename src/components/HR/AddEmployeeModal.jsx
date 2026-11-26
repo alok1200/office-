@@ -8,7 +8,7 @@ export const ASSET_TYPES = [
   ['ID_CARD', 'ID card'], ['HEADSET', 'Headset'], ['KEYBOARD_MOUSE', 'Keyboard / mouse'], ['FURNITURE', 'Furniture'], ['OTHER', 'Other']
 ];
 export const ASSET_CONDITIONS = [['NEW', 'New'], ['GOOD', 'Good'], ['FAIR', 'Fair'], ['POOR', 'Poor']];
-export const DEPARTMENTS = ['Engineering', 'Human Resources', 'Product & Design', 'Marketing', 'Finance & Operations'];
+export const DEPARTMENTS = ['Software development', 'Hr department', 'Digital marketing', 'Sales and distribution', 'Marketing'];
 const OTHER_DEPARTMENT = '__OTHER__';
 export const assetTypeLabel = value => (ASSET_TYPES.find(([id]) => id === value) || [, value])[1];
 
