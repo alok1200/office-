@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../services/api';
-import { attendanceAccuracyLimit, attendanceLocationFailure, evaluateLocation, officeWifiMessage } from '../services/geofenceStatus';
+import { attendanceAccuracyLimit, attendanceLocationFailure, evaluateLocation, officeWifiMessage, summarizeAttendanceCheck } from '../services/geofenceStatus';
 import { readCurrentLocation } from '../services/currentLocation';
 import { useAuth } from '../context/AuthContext';
 import { useDataRefresh } from './useDataRefresh';
@@ -58,11 +58,11 @@ export function useOfficeGeofence(enabled) {
     const connection = office.office_connection_type === 'PUBLIC'
       ? office.office_connection_ip
         ? `The hosted server sees your public IP as ${office.office_connection_ip}.`
-        : 'The hosted server could not verify your public IP. Contact your administrator.'
+        : ''
       : office.office_connection_ip
         ? `The server sees your connection as ${office.office_connection_ip}.`
         : 'The server could not read your connection IP.';
-    const message = `${status} ${connection}`;
+    const message = [status, connection].filter(Boolean).join(' ');
     if (!office.office_wifi_matched) throw new Error(message);
     return message;
   };
@@ -108,14 +108,16 @@ export function useOfficeGeofence(enabled) {
       }
       const { location } = outcome;
       const evaluation = outcome.error || evaluateLocation(office, location);
+      if (!preferWifi) return summarizeAttendanceCheck(office, evaluation);
+
       if (!evaluation.eligible) {
         const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation);
-        if (fallback) return { location: {}, message, gpsSummary };
+        if (fallback) return { location: {}, gpsSummary };
         throw Object.assign(new Error(message), { code: evaluation.code });
       }
 
       const { latitude, longitude, accuracy } = location;
-      return { location: { latitude, longitude, accuracy }, message: `GPS verified. ${evaluation.message} ${officeWifiMessage(office)}` };
+      return { location: { latitude, longitude, accuracy } };
     } finally {
       if (isCurrent()) {
         locationRequest.current = null;

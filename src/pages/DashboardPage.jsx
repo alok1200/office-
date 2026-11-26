@@ -1,45 +1,13 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../services/api';
-import { PunchControls } from '../components/Employee/PunchControls';
-import { WorkingTimer } from '../components/Employee/WorkingTimer';
+import { PersonalAttendance } from '../components/Employee/PersonalAttendance';
 import { HRSummaryCards } from '../components/HR/HRSummaryCards';
 import { CompanyAttendanceTable } from '../components/HR/CompanyAttendanceTable';
 import { Calendar, FileText, ArrowRight } from 'lucide-react';
 import { SuperAdminDashboard } from '../components/SuperAdmin/SuperAdminDashboard';
-import { useDataRefresh } from '../hooks/useDataRefresh';
 
 export function DashboardPage({ setTab }) {
-  const { currentUser, currentUserId, isHR, isSuperAdmin } = useAuth();
-  const [todayData, setTodayData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const attendanceRequest = useRef(0);
-  const showPersonalAttendance = !!currentUserId && !isSuperAdmin && !isHR;
-
-  const fetchTodayData = useCallback(async () => {
-    const request = ++attendanceRequest.current;
-    try {
-      const res = await api.getTodayAttendance(currentUserId);
-      if (request === attendanceRequest.current && res.success && res.data) {
-        setTodayData(res.data);
-        return res.data;
-      }
-    } catch (err) {
-      console.error('Failed to load today attendance:', err);
-    } finally {
-      if (request === attendanceRequest.current) setLoading(false);
-    }
-    return null;
-  }, [currentUserId]);
-
-  useEffect(() => {
-    if (!showPersonalAttendance) return;
-    setTodayData(null);
-    setLoading(true);
-    void fetchTodayData();
-    return () => { attendanceRequest.current++; };
-  }, [fetchTodayData, showPersonalAttendance]);
-  useDataRefresh(fetchTodayData, ['attendance', 'requests', 'employees'], { enabled: showPersonalAttendance });
+  const { isHR, isSuperAdmin } = useAuth();
 
   return (
     <div className="space-y-6 bg-white text-black">
@@ -64,8 +32,7 @@ export function DashboardPage({ setTab }) {
               </span>
             )}
           </div>
-          <WorkingTimer todayData={todayData} />
-          <PunchControls todayData={todayData} onRefresh={fetchTodayData} loading={loading} />
+          <PersonalAttendance />
           {/* Quick Links for Employee */}
           {!isHR && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">

@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
 import { CompanyLogo } from '../components/Common/CompanyLogo';
+import { PersonalAttendance } from '../components/Employee/PersonalAttendance';
 
 const todayLabel = () =>
   new Date().toLocaleDateString('en-IN', {
@@ -48,7 +49,7 @@ const statusText = {
 };
 
 export function HRDashboardPage({ setTab }) {
-  const { currentUser, currentUserId } = useAuth();
+  const { currentUser, currentUserId, isHR } = useAuth();
   const [summary, setSummary] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -223,6 +224,13 @@ export function HRDashboardPage({ setTab }) {
           </div>
         </div>
       </section>
+
+      {isHR && (
+        <section className="space-y-4" aria-labelledby="hr-personal-attendance">
+          <h2 id="hr-personal-attendance" className="text-lg font-black text-blue-950">My attendance</h2>
+          <PersonalAttendance />
+        </section>
+      )}
 
       {loadError && <p role="alert" className="sa-request-error">{loadError} <button type="button" onClick={()=>loadAll(true)}>Retry</button></p>}
       {/* KPI Metric Cards */}

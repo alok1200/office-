@@ -15,8 +15,25 @@ const gpsFallbackMessages = {
 export function officeWifiMessage(office) {
   if (!office.wifi_attendance_enabled) return 'Office Wi-Fi attendance is turned off.';
   if (office.office_wifi_matched) return 'Office Wi-Fi matched.';
+  if (office.office_lan_url) return 'Open the office Wi-Fi attendance link on this page and sign in there.';
   if (office.office_connection_type === 'PUBLIC' && office.office_public_ip_configured === false) return 'Ask your Super Admin to register the office’s dedicated public IP for hosted attendance.';
+  if (office.office_connection_type === 'PUBLIC' && office.office_connection_ip === null) return 'The hosted server could not verify your public IP. Contact your administrator.';
   return 'Office Wi-Fi could not be verified.';
+}
+
+export function summarizeAttendanceCheck(office, gps) {
+  const wifiMatched = office.wifi_attendance_enabled && office.office_wifi_matched;
+  return {
+    gps: {
+      verified: Boolean(gps.eligible),
+      message: gps.message
+    },
+    wifi: {
+      verified: Boolean(wifiMatched),
+      message: officeWifiMessage(office)
+    },
+    ready: Boolean(gps.eligible || wifiMatched)
+  };
 }
 
 export function attendanceLocationFailure(office, { code, message }) {

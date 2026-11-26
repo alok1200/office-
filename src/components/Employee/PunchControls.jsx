@@ -13,6 +13,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
   const [loadingAction, setLoadingAction] = useState(null);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [locationCheck, setLocationCheck] = useState(null);
   const canRecord = !isSuperAdmin && !loading && todayData?.can_record_attendance === true;
   const geofence = useOfficeGeofence(canRecord);
 
@@ -32,6 +33,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     setLoadingAction(action);
     setMessage(null);
     setError(null);
+    setLocationCheck(null);
 
     let punchSubmitted = false;
     try {
@@ -39,12 +41,12 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         setMessage(await geofence.checkOfficeWifi());
         return;
       }
-      const { message: locationMessage, location, gpsSummary } = await geofence.checkLocation({ preferWifi: action !== 'CHECK_LOCATION' });
       if (action === 'CHECK_LOCATION') {
-        setMessage(locationMessage);
+        setLocationCheck(await geofence.checkLocation());
         return;
       }
 
+      const { location, gpsSummary } = await geofence.checkLocation({ preferWifi: true });
       punchSubmitted = true;
       const res = await api.recordPunch(currentUserId, action, location);
       const latest = await onRefresh();
@@ -99,6 +101,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
           {geofence.office?.name && <p className="text-xs text-slate-600">{geofence.office.name} · GPS accuracy must be ±{geofence.office.max_accuracy_m} m or better</p>}
           {geofence.office?.office_wifi_matched && <p className="text-xs font-semibold text-blue-700">Office Wi-Fi matched</p>}
+          {geofence.office?.office_lan_url && <a className="text-xs font-bold text-blue-700 underline" href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a>}
           <button
             type="button"
             className="text-xs font-bold text-blue-700 underline disabled:opacity-50"
@@ -106,7 +109,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
             disabled={locationBusy}
             aria-describedby="attendance-location-policy"
           >
-            Check my location
+            Verify my location and Wi-Fi
           </button>
           <button type="button" className="text-xs font-bold text-blue-700 underline disabled:opacity-50" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
             Check office Wi-Fi
@@ -118,8 +121,27 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         <p role="status" className="mt-2 text-sm text-slate-600">
           {geofence.progress !== null
             ? `Checking your location (GPS accuracy ±${Math.round(geofence.progress)} m)…`
-            : loadingAction === 'CHECK_WIFI' ? 'Checking your office network…' : loadingAction === 'CHECK_LOCATION' ? 'Checking your location…' : 'Verifying your location and recording attendance…'}
+            : loadingAction === 'CHECK_WIFI' ? 'Checking your office network…' : loadingAction === 'CHECK_LOCATION' ? 'Checking GPS and office Wi-Fi…' : 'Verifying your location and recording attendance…'}
         </p>
+      )}
+
+      {locationCheck && (
+        <section role="status" className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+          <p className="font-bold text-slate-900">{locationCheck.ready ? 'Location verified for attendance' : 'Location verification needed'}</p>
+          <dl className="mt-2 grid gap-2 sm:grid-cols-2">
+            {[['GPS', locationCheck.gps], ['Office Wi-Fi', locationCheck.wifi]].map(([label, result]) => (
+              <div key={label}>
+                <dt className={result.verified ? 'font-semibold text-blue-700' : 'font-semibold text-slate-700'}>{label}</dt>
+                <dd className="text-xs text-slate-600">{result.message}</dd>
+              </div>
+            ))}
+          </dl>
+          {locationCheck.ready && !isDayFinished && (
+            <p className="mt-2 text-xs font-semibold text-slate-700">
+              {isCheckInAllowed ? 'Select Check In below.' : isEndBreakAllowed ? 'Select End Break to resume work.' : 'Select Start Break or Check Out below.'}
+            </p>
+          )}
+        </section>
       )}
 
       {/* Messages */}
