@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 export const COMPANY_NAME = 'KNOOVIQ Industries Pvt Ltd';
-export const COMPANY_LOGO_PATH = '/branding/knooviq-logo.png';
+export const COMPANY_LOGO_PATH = '/branding/knooviq-logo.png?v=2';
 
 export function CompanyLogo({ variant = 'sidebar', className = '' }) {
   const [unavailable, setUnavailable] = useState(false);
