@@ -16,8 +16,12 @@ export function officeWifiMessage(office) {
   if (!office.wifi_attendance_enabled) return 'Office Wi-Fi attendance is turned off.';
   if (office.office_wifi_matched) return 'Office Wi-Fi matched.';
   if (office.office_lan_url) return 'Open the office Wi-Fi attendance link on this page and sign in there.';
-  if (office.office_connection_type === 'PUBLIC' && office.office_public_ip_configured === false) return 'Ask your Super Admin to register the office’s dedicated public IP for hosted attendance.';
   if (office.office_connection_type === 'PUBLIC' && office.office_connection_ip === null) return 'The hosted server could not verify your public IP. Contact your administrator.';
+  if (office.office_connection_type === 'PUBLIC' && office.office_connection_ip) {
+    const isIPv6 = office.office_connection_ip.includes(':');
+    if (isIPv6 && office.office_public_ipv6_configured === false) return 'This device is using IPv6. Ask your Super Admin to register the office Wi-Fi’s public IPv6 subnet.';
+    if (!isIPv6 && office.office_public_ip_configured === false) return 'Ask your Super Admin to register the office’s dedicated public IPv4 for hosted attendance.';
+  }
   return 'Office Wi-Fi could not be verified.';
 }
 
