@@ -51,8 +51,9 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       const res = await api.recordPunch(currentUserId, action, location);
       const latest = await onRefresh();
       if (res.success) {
-        setMessage(res.verification_method === 'OFFICE_WIFI'
-          ? [res.message, gpsSummary].filter(Boolean).join(' ')
+        const confirmation = `${punchLabels[action]} recorded.`;
+        setMessage(!isHR ? confirmation : res.verification_method === 'OFFICE_WIFI'
+          ? [res.message, gpsSummary].filter(Boolean).join(' ') || confirmation
           : `${punchLabels[action]} recorded using GPS.`);
       } else {
         const responseMessage = res.message || res.error || 'Could not record attendance. Please retry.';
@@ -68,7 +69,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       const failure = err instanceof TypeError && punchSubmitted
         ? 'The connection was interrupted. Check your attendance status before retrying.'
         : err.message || 'Could not verify your location. Please retry.';
-      setError(!punchSubmitted && ['CHECK_IN', 'CHECK_OUT'].includes(action) && (err.code?.startsWith('GPS_') || err.code === 'LOW_ACCURACY')
+      setError(isHR && !punchSubmitted && ['CHECK_IN', 'CHECK_OUT'].includes(action) && (err.code?.startsWith('GPS_') || err.code === 'LOW_ACCURACY')
         ? `${failure} If you miss a punch, submit an Attendance Regularization request from My Requests.`
         : failure);
     } finally {
@@ -81,6 +82,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
   const isEndBreakAllowed = currentState === 'ON_BREAK';
   const isCheckOutAllowed = currentState === 'CHECKED_IN';
   const isDayFinished = currentState === 'CHECKED_OUT';
+  const officeLink = geofence.office?.office_lan_url;
   const actions = [
     { action: 'CHECK_IN', label: 'Check In', icon: LogIn, available: isCheckInAllowed, primary: true },
     { action: 'START_BREAK', label: 'Start Break', icon: Utensils, available: isStartBreakAllowed },
@@ -93,11 +95,9 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       <div className="attendance-heading">
         <div>
           <h2>{isHR ? 'Attendance Punch Controls' : 'Attendance'}</h2>
-          <p id="attendance-location-policy">
-            {isHR
-              ? `GPS verification uses the ${ATTENDANCE_RADIUS_M} m office boundary.${geofence.office?.wifi_attendance_enabled ? ' Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.' : ''}`
-              : 'Your location is verified automatically when you record attendance.'}
-          </p>
+          {isHR && <p id="attendance-location-policy">
+            GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.'}
+          </p>}
         </div>
         <div className="flex items-center gap-2">
           <span className="sr-only">Current status</span>
@@ -105,38 +105,18 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       </div>
 
-      {canRecord && (isHR || geofence.office?.wifi_attendance_enabled || geofence.office?.office_lan_url) && (
+      {canRecord && isHR && (
         <div className="attendance-tools">
-          {isHR && geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
+          {geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
           {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match" role="status">Office Wi-Fi verified</p>}
-          {geofence.office?.office_lan_url && <p><a className="attendance-office-link" href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a></p>}
-          {!isHR && geofence.office?.wifi_attendance_enabled && !geofence.office.office_wifi_matched && !geofence.office.office_lan_url && (
-            <p role="status">Office Wi-Fi could not be verified. You can still use GPS to record attendance.</p>
-          )}
-          {isHR && (
-            <>
-              <button
-                type="button"
-                onClick={() => handlePunch('CHECK_LOCATION')}
-                disabled={locationBusy}
-                aria-describedby="attendance-location-policy"
-              >
-                Verify my location and Wi-Fi
-              </button>
-              <button type="button" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
-                Check office Wi-Fi
-              </button>
-            </>
-          )}
+          {officeLink && <p><a className="attendance-office-link" href={officeLink}>Open the office Wi-Fi attendance link</a></p>}
+          <button type="button" onClick={() => handlePunch('CHECK_LOCATION')} disabled={locationBusy} aria-describedby="attendance-location-policy">
+            Verify my location and Wi-Fi
+          </button>
+          <button type="button" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
+            Check office Wi-Fi
+          </button>
         </div>
-      )}
-      {canRecord && geofence.loading && <p role="status" className="mt-2 text-sm text-slate-600">Loading your office…</p>}
-      {loadingAction && (
-        <p role="status" className="mt-2 text-sm text-slate-600">
-          {geofence.progress !== null
-            ? `Checking your location (GPS accuracy ±${Math.round(geofence.progress)} m)…`
-            : loadingAction === 'CHECK_WIFI' ? 'Checking your office network…' : loadingAction === 'CHECK_LOCATION' ? 'Checking GPS and office Wi-Fi…' : 'Verifying your location and recording attendance…'}
-        </p>
       )}
 
       {isHR && locationCheck && (
@@ -158,7 +138,31 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </section>
       )}
 
-      {/* Messages */}
+      <div className="attendance-actions">
+        {actions.map(({ action, label, icon: Icon, available, primary }) => (
+          <button
+            key={action}
+            type="button"
+            className={`attendance-action${primary ? ' attendance-action-primary' : ''}`}
+            onClick={() => handlePunch(action)}
+            disabled={!available || locationBusy || !canRecord}
+            aria-describedby={isHR ? 'attendance-location-policy' : undefined}
+          >
+            {loadingAction === action ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <Icon size={17} aria-hidden="true" />}
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+
+      {canRecord && geofence.loading && !loadingAction && <p role="status" className="mt-2 text-sm text-slate-600">Getting attendance ready…</p>}
+      {loadingAction && (
+        <p role="status" className="mt-2 text-sm text-slate-600">
+          {isHR && geofence.progress !== null
+            ? `Checking your location (GPS accuracy ±${Math.round(geofence.progress)} m)…`
+            : loadingAction === 'CHECK_WIFI' ? 'Checking your office network…' : 'Checking your location…'}
+        </p>
+      )}
+
       {message && (
         <div role="status" className="mt-4 p-3.5 rounded-xl bg-white border border-blue-200 text-black text-xs flex items-center gap-2 animate-in fade-in shadow-2xs">
           <CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
@@ -180,23 +184,10 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       )}
 
-      <div className="attendance-actions">
-        {actions.map(({ action, label, icon: Icon, available, primary }) => (
-          <button
-            key={action}
-            type="button"
-            className={`attendance-action${primary ? ' attendance-action-primary' : ''}`}
-            onClick={() => handlePunch(action)}
-            disabled={!available || locationBusy || !canRecord}
-            aria-describedby="attendance-location-policy"
-          >
-            {loadingAction === action ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <Icon size={17} aria-hidden="true" />}
-            <span>{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {isDayFinished && (
+      {!isHR && canRecord && !isDayFinished && officeLink && !geofence.office.office_wifi_matched && (
+        <p className="mt-3 text-sm"><a className="attendance-office-link" href={officeLink}>Open attendance on office Wi-Fi</a></p>
+      )}
+      {isHR && isDayFinished && (
         <div className="mt-4 p-3 bg-white border border-slate-200 rounded-xl text-center text-xs text-black font-bold shadow-2xs">
           ✅ Workday completed and checked out. No further punches allowed today.
         </div>

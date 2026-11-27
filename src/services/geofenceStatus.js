@@ -12,6 +12,17 @@ const gpsFallbackMessages = {
   LOW_ACCURACY: 'GPS accuracy was too low.'
 };
 
+const attendanceRetryMessages = {
+  GPS_UNAVAILABLE: 'Your location is unavailable. Turn on location services and try again.',
+  GPS_TIMEOUT: 'Location verification timed out. Try again near a window or outdoors.',
+  GPS_PERMISSION_DENIED: 'Allow location access for this site and try again.',
+  GPS_INSECURE_CONTEXT: 'Open the secure attendance link and try again.',
+  GPS_POLICY_BLOCKED: 'Open the attendance app directly in your browser and try again.',
+  GPS_REQUIRED: 'Turn on precise location and try again.',
+  LOW_ACCURACY: 'Try again near a window or outdoors so we can verify your location.',
+  OUTSIDE_GEOFENCE: 'Your location appears outside the office. If you’re at work, try again or contact your attendance administrator.'
+};
+
 export function officeWifiMessage(office) {
   if (!office.wifi_attendance_enabled) return 'Office Wi-Fi attendance is turned off.';
   if (office.office_wifi_matched) return 'Office Wi-Fi matched.';
@@ -20,7 +31,7 @@ export function officeWifiMessage(office) {
   if (office.office_connection_type === 'PUBLIC' && office.office_connection_ip) {
     const isIPv6 = office.office_connection_ip.includes(':');
     if (isIPv6 && office.office_public_ipv6_configured === false) return 'This device is using IPv6. Ask your Super Admin to register the office Wi-Fi’s public IPv6 subnet.';
-    if (!isIPv6 && office.office_public_ip_configured === false) return 'Ask your Super Admin to register the office’s dedicated public IPv4 for hosted attendance.';
+    if (!isIPv6 && office.office_public_ip_configured === false) return 'Office Wi-Fi setup is incomplete. Contact your administrator.';
   }
   return 'Office Wi-Fi could not be verified.';
 }
@@ -43,12 +54,12 @@ export function summarizeAttendanceCheck(office, gps) {
 export function attendanceLocationFailure(office, { code, message }, { showWifiDiagnostics = true } = {}) {
   const gpsSummary = gpsFallbackMessages[code];
   if (!gpsSummary && code !== 'OUTSIDE_GEOFENCE') return { message };
-  const wifi = showWifiDiagnostics || !office.wifi_attendance_enabled || office.office_wifi_matched || office.office_lan_url
-    ? officeWifiMessage(office)
-    : 'Office Wi-Fi could not be verified.';
   if (gpsSummary && office.wifi_attendance_enabled && office.office_wifi_matched) {
+    const wifi = officeWifiMessage(office);
     return { fallback: true, gpsSummary, message: `${gpsSummary} ${wifi} You can record attendance using office Wi-Fi.` };
   }
+  if (!showWifiDiagnostics) return { message: attendanceRetryMessages[code] };
+  const wifi = officeWifiMessage(office);
   const wifiHelp = gpsSummary && office.wifi_attendance_enabled ? ' Connect to your registered office network and retry.' : '';
   return { message: `${message} ${wifi}${wifiHelp}` };
 }
