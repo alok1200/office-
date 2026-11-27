@@ -26,7 +26,7 @@ export function Header({ onToggleMobileMenu, setTab }) {
         <button type="button" aria-label="Open navigation menu" onClick={onToggleMobileMenu} className="ui-icon-button md:hidden"><Menu size={20} /></button>
         <CompanyLogo variant="compact" className="header-company-logo" />
         <div>
-          <h1>Welcome back, {currentUser?.first_name || 'User'}</h1>
+          <div className="header-greeting">Welcome back, {currentUser?.first_name || 'User'}</div>
           <p>{[currentUser?.designation, currentUser?.department_name].filter(Boolean).join(' · ')}</p>
         </div>
       </div>

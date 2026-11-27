@@ -38,9 +38,9 @@ export function PersonalAttendance() {
   useDataRefresh(fetchTodayData, ['attendance', 'requests', 'employees'], { enabled: Boolean(currentUserId) });
 
   return (
-    <>
-      <WorkingTimer todayData={todayData} />
+    <div className="dashboard-workday">
       <PunchControls todayData={todayData} onRefresh={fetchTodayData} loading={loading} />
-    </>
+      <WorkingTimer todayData={todayData} loading={loading} />
+    </div>
   );
 }

@@ -11,24 +11,13 @@ import {
   FileText,
   ArrowRight,
   RefreshCw,
-  CalendarDays,
-  Sparkles,
   CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
-import { CompanyLogo } from '../components/Common/CompanyLogo';
+import { DashboardHeader, DashboardMetric, DashboardShortcut, dashboardDate } from '../components/Dashboard/DashboardElements';
 import { PersonalAttendance } from '../components/Employee/PersonalAttendance';
-
-const todayLabel = () =>
-  new Date().toLocaleDateString('en-IN', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Asia/Kolkata',
-  });
 
 const todayISO = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
 
@@ -49,7 +38,7 @@ const statusText = {
 };
 
 export function HRDashboardPage({ setTab }) {
-  const { currentUser, currentUserId, isHR } = useAuth();
+  const { currentUserId, isHR } = useAuth();
   const [summary, setSummary] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -102,8 +91,7 @@ export function HRDashboardPage({ setTab }) {
       value: loading || !summary ? '—' : total,
       sub: 'Active team members',
       icon: Users,
-      iconBg: 'bg-blue-50 text-blue-600 border-blue-100',
-      accent: 'text-blue-600',
+      tone: 'blue',
       onClick: () => setTab('hr-employees'),
     },
     {
@@ -111,8 +99,7 @@ export function HRDashboardPage({ setTab }) {
       value: loading ? '—' : present,
       sub: loading ? 'Loading…' : `${attendancePct}% attendance rate`,
       icon: UserCheck,
-      iconBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-      accent: 'text-emerald-600',
+      tone: 'green',
       onClick: () => setTab('hr-attendance'),
     },
     {
@@ -120,8 +107,7 @@ export function HRDashboardPage({ setTab }) {
       value: loading ? '—' : onLeave,
       sub: 'Approved time-off today',
       icon: Palmtree,
-      iconBg: 'bg-sky-50 text-sky-600 border-sky-100',
-      accent: 'text-sky-600',
+      tone: 'indigo',
       onClick: () => setTab('hr-company-requests'),
     },
     {
@@ -129,8 +115,7 @@ export function HRDashboardPage({ setTab }) {
       value: loading ? '—' : absent,
       sub: pendingTickets ? `${pendingTickets} pending ticket(s)` : 'No pending tickets',
       icon: UserX,
-      iconBg: 'bg-rose-50 text-rose-600 border-rose-100',
-      accent: 'text-rose-600',
+      tone: 'rose',
       onClick: () => setTab('tickets'),
     },
   ];
@@ -138,169 +123,74 @@ export function HRDashboardPage({ setTab }) {
   const quickActions = [
     {
       title: 'Team Directory',
-      desc: 'View staff, company assets & passwords',
+      desc: 'Review profiles and assigned assets',
       icon: Users,
       tab: 'hr-employees',
-      color: 'bg-blue-50 text-blue-600 border-blue-200',
+      tone: 'blue',
     },
     {
       title: 'Add Employee',
       desc: 'Onboard new hire & assign company assets',
       icon: UserPlus,
       tab: 'hr-add-employee',
-      color: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+      tone: 'indigo',
     },
     {
       title: 'Company Attendance',
       desc: 'Check daily punches & working hours',
       icon: Clock,
       tab: 'hr-attendance',
-      color: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+      tone: 'green',
     },
     {
       title: 'Employee Requests',
       desc: 'Inspect leave & WFH submissions',
       icon: FileText,
       tab: 'hr-company-requests',
-      color: 'bg-amber-50 text-amber-600 border-amber-200',
+      tone: 'amber',
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Hero Banner — White Background & Blue Text Theme */}
-      <section className="relative overflow-hidden rounded-3xl bg-white border border-blue-200 p-6 sm:p-8 shadow-sm">
-        <div className="pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full bg-blue-50 blur-2xl" />
+    <div className="dashboard-page">
+      <DashboardHeader title="HR dashboard" context={dashboardDate()} description="Company attendance, employee records, and correction tickets.">
+        <button type="button" className="dashboard-hero-primary" onClick={() => setTab('hr-add-employee')}>
+          <UserPlus size={16} aria-hidden="true" /> Add Employee
+        </button>
+        <button type="button" onClick={() => setTab('tickets')}>
+          <Ticket size={16} aria-hidden="true" /> Raise Ticket{pendingTickets > 0 && <span>({pendingTickets} pending)</span>}
+        </button>
+        <button type="button" onClick={() => loadAll(true)} disabled={refreshing} aria-label="Refresh dashboard">
+          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+        </button>
+      </DashboardHeader>
 
-        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-2.5">
-            <div className="flex flex-wrap items-center gap-3">
-              <CompanyLogo variant="compact" />
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-[11px] font-bold text-blue-700 tracking-wide">
-                <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
-                <span>{todayLabel()}</span>
-              </div>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-blue-950">
-              Welcome back, {currentUser?.first_name || 'HR Admin'}
-            </h1>
-            <p className="text-sm text-blue-700 max-w-xl font-medium">
-              Monitor real-time company attendance, onboard new employees with assets, and raise attendance tickets for Super Admin review.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setTab('hr-add-employee')}
-              className="ui-button-primary"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Add Employee</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTab('tickets')}
-              className="inline-flex items-center gap-2 rounded-xl bg-white border-2 border-blue-600 px-4 py-2.5 text-xs font-black text-blue-700 hover:bg-blue-50 transition-all active:scale-[0.98]"
-            >
-              <Ticket className="w-4 h-4 text-blue-600" />
-              <span>Raise Ticket</span>
-              {pendingTickets > 0 && (
-                <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[10px] font-black text-white">
-                  {pendingTickets}
-                </span>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => loadAll(true)}
-              disabled={refreshing}
-              title="Refresh dashboard"
-              aria-label="Refresh dashboard"
-              className="ui-icon-button"
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
+      {loadError && <p role="alert" className="sa-request-error">{loadError} <button type="button" onClick={()=>loadAll(true)}>Retry</button></p>}
+      <section className="dashboard-section" aria-labelledby="hr-metrics-heading">
+        <h2 id="hr-metrics-heading" className="dashboard-section-title">Company attendance today</h2>
+        <div className="dashboard-metrics dashboard-metrics--wide">
+          {statCards.map(card => <DashboardMetric key={card.label} label={card.label} value={card.value} detail={card.sub} icon={card.icon} tone={card.tone} onClick={card.onClick} />)}
         </div>
       </section>
 
       {isHR && (
-        <section className="space-y-4" aria-labelledby="hr-personal-attendance">
-          <h2 id="hr-personal-attendance" className="text-lg font-black text-blue-950">My attendance</h2>
+        <section className="dashboard-section" aria-labelledby="hr-personal-attendance">
+          <h2 id="hr-personal-attendance" className="dashboard-section-title">My attendance</h2>
           <PersonalAttendance />
         </section>
       )}
 
-      {loadError && <p role="alert" className="sa-request-error">{loadError} <button type="button" onClick={()=>loadAll(true)}>Retry</button></p>}
-      {/* KPI Metric Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <button
-              key={card.label}
-              type="button"
-              onClick={card.onClick}
-              className="group text-left bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-blue-300 hover:shadow-md transition-all flex items-start justify-between gap-4"
-            >
-              <div className="space-y-1">
-                <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                  {card.label}
-                </p>
-                <p className="text-3xl font-black text-black tracking-tight">{card.value}</p>
-                <p className={`text-xs font-semibold ${card.accent}`}>{card.sub}</p>
-              </div>
-              <div
-                className={`w-12 h-12 rounded-2xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${card.iconBg}`}
-              >
-                <Icon className="w-6 h-6" />
-              </div>
-            </button>
-          );
-        })}
-      </section>
-
-      {/* Quick Actions */}
-      <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-black text-black uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" />
-            <span>Quick Workspace Actions</span>
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3.5">
-          {quickActions.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.title}
-                type="button"
-                onClick={() => setTab(item.tab)}
-                className="group text-left bg-white rounded-2xl p-4 border border-slate-200 hover:border-blue-400 hover:shadow-md transition-all flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 ${item.color}`}
-                  >
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-black text-black truncate">{item.title}</p>
-                    <p className="text-[11px] text-slate-500 font-medium truncate">{item.desc}</p>
-                  </div>
-                </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all shrink-0" />
-              </button>
-            );
-          })}
+      <section className="dashboard-section" aria-labelledby="hr-shortcuts-heading">
+        <h2 id="hr-shortcuts-heading" className="dashboard-section-title">Quick actions</h2>
+        <div className="dashboard-shortcuts dashboard-shortcuts--wide">
+          {quickActions.map(item => <DashboardShortcut key={item.tab} title={item.title} description={item.desc} icon={item.icon} tone={item.tone} onClick={() => setTab(item.tab)} />)}
         </div>
       </section>
 
       {/* Two-Column Live Feed */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section className="dashboard-feed">
         {/* Today's Attendance Snapshot */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="dashboard-surface space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-black text-black flex items-center gap-2">
@@ -326,7 +216,7 @@ export function HRDashboardPage({ setTab }) {
               Loading today's attendance…
             </div>
           ) : attendance.length === 0 ? (
-            <div className="py-10 text-center text-xs text-slate-500 font-medium rounded-xl border border-dashed border-slate-200">
+            <div className="dashboard-empty">
               No attendance records yet for today.
             </div>
           ) : (
@@ -363,7 +253,7 @@ export function HRDashboardPage({ setTab }) {
         </div>
 
         {/* Recent Attendance Tickets */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs flex flex-col justify-between space-y-4">
+        <div className="dashboard-surface space-y-4">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h3 className="text-base font-black text-black flex items-center gap-2">
@@ -389,7 +279,7 @@ export function HRDashboardPage({ setTab }) {
               Loading tickets…
             </div>
           ) : tickets.length === 0 ? (
-            <div className="py-10 text-center space-y-2 rounded-xl border border-dashed border-slate-200">
+            <div className="dashboard-empty space-y-2">
               <CheckCircle2 className="w-7 h-7 text-emerald-500 mx-auto" />
               <p className="text-xs font-bold text-black">All clear — no tickets raised yet</p>
               <p className="text-[11px] text-slate-500">

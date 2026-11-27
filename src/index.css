@@ -338,7 +338,7 @@
   gap: 12px;
   min-width: 0;
 }
-.header-welcome h1 {
+.header-greeting {
   color: #002d7a;
   font-size: 16px;
   font-weight: 700;
@@ -1321,7 +1321,7 @@
   .header-welcome {
     gap: 8px;
   }
-  .header-welcome h1 {
+  .header-greeting {
     font-size: 13px;
   }
   .header-welcome p {
@@ -1419,7 +1419,7 @@
   }
 }
 @media (max-width: 380px) {
-  .header-welcome h1 {
+  .header-greeting {
     max-width: 110px;
   }
   .sa-team-grid,

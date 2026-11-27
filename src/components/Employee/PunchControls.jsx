@@ -81,37 +81,42 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
   const isEndBreakAllowed = currentState === 'ON_BREAK';
   const isCheckOutAllowed = currentState === 'CHECKED_IN';
   const isDayFinished = currentState === 'CHECKED_OUT';
+  const actions = [
+    { action: 'CHECK_IN', label: 'Check In', icon: LogIn, available: isCheckInAllowed, primary: true },
+    { action: 'START_BREAK', label: 'Start Break', icon: Utensils, available: isStartBreakAllowed },
+    { action: 'END_BREAK', label: 'End Break', icon: Utensils, available: isEndBreakAllowed, primary: true },
+    { action: 'CHECK_OUT', label: 'Check Out', icon: LogOut, available: isCheckOutAllowed, primary: true }
+  ];
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-slate-200">
+    <div className="dashboard-surface">
+      <div className="attendance-heading">
         <div>
-          <h2 className="text-lg font-black text-black">Attendance Punch Controls</h2>
-          <p id="attendance-location-policy" className="text-xs text-slate-600 mt-0.5">
+          <h2>Attendance Punch Controls</h2>
+          <p id="attendance-location-policy">
             GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-black font-bold">Current Status:</span>
+          <span className="sr-only">Current status</span>
           <StatusBadge status={currentState} />
         </div>
       </div>
 
       {canRecord && (
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          {geofence.office?.name && <p className="text-xs text-slate-600">{geofence.office.name} · GPS accuracy must be ±{geofence.office.max_accuracy_m} m or better</p>}
-          {geofence.office?.office_wifi_matched && <p className="text-xs font-semibold text-blue-700">Office Wi-Fi matched</p>}
-          {geofence.office?.office_lan_url && <a className="text-xs font-bold text-blue-700 underline" href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a>}
+        <div className="attendance-tools">
+          {geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
+          {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match">Office Wi-Fi matched</p>}
+          {geofence.office?.office_lan_url && <a href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a>}
           <button
             type="button"
-            className="text-xs font-bold text-blue-700 underline disabled:opacity-50"
             onClick={() => handlePunch('CHECK_LOCATION')}
             disabled={locationBusy}
             aria-describedby="attendance-location-policy"
           >
             Verify my location and Wi-Fi
           </button>
-          <button type="button" className="text-xs font-bold text-blue-700 underline disabled:opacity-50" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
+          <button type="button" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
             Check office Wi-Fi
           </button>
         </div>
@@ -166,83 +171,20 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       )}
 
-      {/* Available actions use blue; unavailable actions remain disabled. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mt-5">
-        {/* 1. Check In */}
-        <button
-          onClick={() => handlePunch('CHECK_IN')}
-          aria-describedby="attendance-location-policy"
-          title="Verify your location and check in"
-          disabled={!isCheckInAllowed || locationBusy || !canRecord}
-          className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
-            isCheckInAllowed && canRecord
-              ? 'ui-button-primary'
-              : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
-          }`}
-        >
-          {loadingAction === 'CHECK_IN' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-          ) : (
-            <LogIn className="w-4 h-4 text-blue-600" />
-          )}
-          <span>Check In</span>
-        </button>
-
-        {/* 2. Start Break (with Cutlery icon in Blue) */}
-        <button
-          onClick={() => handlePunch('START_BREAK')}
-          disabled={!isStartBreakAllowed || locationBusy || !canRecord}
-          className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
-            isStartBreakAllowed && canRecord
-              ? 'ui-button-primary'
-              : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
-          }`}
-        >
-          {loadingAction === 'START_BREAK' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-          ) : (
-            <Utensils className="w-4 h-4 text-blue-600" />
-          )}
-          <span>Start Break</span>
-        </button>
-
-        {/* 3. End Break (with Cutlery icon in Blue) */}
-        <button
-          onClick={() => handlePunch('END_BREAK')}
-          disabled={!isEndBreakAllowed || locationBusy || !canRecord}
-          className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
-            isEndBreakAllowed && canRecord
-              ? 'ui-button-primary'
-              : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
-          }`}
-        >
-          {loadingAction === 'END_BREAK' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-          ) : (
-            <Utensils className="w-4 h-4 text-blue-600" />
-          )}
-          <span>End Break</span>
-        </button>
-
-        {/* 4. Check Out */}
-        <button
-          onClick={() => handlePunch('CHECK_OUT')}
-          aria-describedby="attendance-location-policy"
-          title="Verify your location and check out"
-          disabled={!isCheckOutAllowed || locationBusy || !canRecord}
-          className={`flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-xl font-bold text-sm transition-all shadow-xs ${
-            isCheckOutAllowed && canRecord
-              ? 'ui-button-primary'
-              : 'bg-white text-slate-400 cursor-not-allowed border border-slate-200 opacity-60'
-          }`}
-        >
-          {loadingAction === 'CHECK_OUT' ? (
-            <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
-          ) : (
-            <LogOut className="w-4 h-4 text-blue-600" />
-          )}
-          <span>Check Out</span>
-        </button>
+      <div className="attendance-actions">
+        {actions.map(({ action, label, icon: Icon, available, primary }) => (
+          <button
+            key={action}
+            type="button"
+            className={`attendance-action${primary ? ' attendance-action-primary' : ''}`}
+            onClick={() => handlePunch(action)}
+            disabled={!available || locationBusy || !canRecord}
+            aria-describedby="attendance-location-policy"
+          >
+            {loadingAction === action ? <Loader2 size={17} className="animate-spin" aria-hidden="true" /> : <Icon size={17} aria-hidden="true" />}
+            <span>{label}</span>
+          </button>
+        ))}
       </div>
 
       {isDayFinished && (
