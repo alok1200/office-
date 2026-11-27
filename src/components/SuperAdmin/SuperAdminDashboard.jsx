@@ -2,7 +2,6 @@ import {useDataRefresh} from '../../hooks/useDataRefresh';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CalendarDays, CheckCircle2, ChevronRight, FileText, Info, Loader2, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { CompanyLogo } from '../Common/CompanyLogo';
-import { LeaveAllowances } from './LeaveAllowances';
 import { GeofenceCard } from './GeofenceCard';
 import { api } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
@@ -79,7 +78,6 @@ const recent = { data: [], loading: false, error: null, refresh: () => {} }; // 
       <div className="sa-team-footer"><span>{teamRows.length ? `${teamRows.length} team members` : 'Team overview'}</span><span title="Team notes are not supported by the current backend.">Team notes are not available yet</span></div>
     </section>
     </div>
-    <LeaveAllowances onSubmitted={requests.refresh} />
     <div className="sa-bottom-grid">
       <section className="sa-card"><Title icon={FileText} aside={<button className="sa-icon-button" aria-label="View all my requests" onClick={() => setTab('my-requests')}><ChevronRight size={17} /></button>}>My Requests</Title><p className="sa-description">Your latest leave, WFH, and regularization requests.</p>
         <State resource={requests} empty={!requestRows.length} emptyText="You're all caught up. No requests submitted yet."><div className="sa-table-wrap"><table><thead><tr><th>Type</th><th>Date</th><th>Status</th><th>Reason</th></tr></thead><tbody>{requestRows.slice(0, 3).map(row => <tr key={row.id}><td><span className="sa-pill blue">{label(row.request_type)}</span></td><td className="sa-nowrap">{date(row.start_date)}</td><td><Pill value={row.status} /></td><td className="sa-reason" title={row.reason}>{row.reason}</td></tr>)}</tbody></table></div></State>
