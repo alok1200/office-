@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { ATTENDANCE_RADIUS_M, attendanceLocationFailure } from '../../services/geofenceStatus';
+import { ATTENDANCE_RADIUS_M, attendanceLocationFailure, officeWifiMessage } from '../../services/geofenceStatus';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
 import { StatusBadge } from '../Common/StatusBadge';
 import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
@@ -9,7 +9,7 @@ import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'luci
 const punchLabels = { CHECK_IN: 'Check-in', CHECK_OUT: 'Check-out', START_BREAK: 'Break start', END_BREAK: 'Break end' };
 
 export function PunchControls({ todayData, onRefresh, loading = false }) {
-  const { currentUserId, isSuperAdmin } = useAuth();
+  const { currentUserId, isHR, isSuperAdmin } = useAuth();
   const [loadingAction, setLoadingAction] = useState(null);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
@@ -106,19 +106,26 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       {canRecord && (
         <div className="attendance-tools">
           {geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
-          {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match">Office Wi-Fi matched</p>}
-          {geofence.office?.office_lan_url && <a href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a>}
-          <button
-            type="button"
-            onClick={() => handlePunch('CHECK_LOCATION')}
-            disabled={locationBusy}
-            aria-describedby="attendance-location-policy"
-          >
-            Verify my location and Wi-Fi
-          </button>
-          <button type="button" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
-            Check office Wi-Fi
-          </button>
+          {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match" role="status">Office Wi-Fi matched</p>}
+          {geofence.office?.office_lan_url && <p><a className="attendance-office-link" href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a></p>}
+          {!isHR && geofence.office?.wifi_attendance_enabled && !geofence.office.office_wifi_matched && !geofence.office.office_lan_url && (
+            <p role="status">{officeWifiMessage(geofence.office)}</p>
+          )}
+          {isHR && (
+            <>
+              <button
+                type="button"
+                onClick={() => handlePunch('CHECK_LOCATION')}
+                disabled={locationBusy}
+                aria-describedby="attendance-location-policy"
+              >
+                Verify my location and Wi-Fi
+              </button>
+              <button type="button" disabled={locationBusy} onClick={() => handlePunch('CHECK_WIFI')}>
+                Check office Wi-Fi
+              </button>
+            </>
+          )}
         </div>
       )}
       {canRecord && geofence.loading && <p role="status" className="mt-2 text-sm text-slate-600">Loading your office…</p>}
@@ -130,7 +137,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </p>
       )}
 
-      {locationCheck && (
+      {isHR && locationCheck && (
         <section role="status" className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
           <p className="font-bold text-slate-900">{locationCheck.ready ? 'Location verified for attendance' : 'Location verification needed'}</p>
           <dl className="mt-2 grid gap-2 sm:grid-cols-2">

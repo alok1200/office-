@@ -194,9 +194,10 @@
 .attendance-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .attendance-tools > p { flex-basis: 100%; font-size: 12px; color: var(--dashboard-muted); }
 .attendance-tools > p.attendance-wifi-match { color: #11634d; font-weight: 650; }
-.attendance-tools :is(button, a) { display: inline-flex; align-items: center; min-height: 42px; padding: 6px 10px; border: 1px solid #cddff6; border-radius: 9px; background: #f1f7ff; color: #1e549a; font-size: 12px; font-weight: 670; }
-.attendance-tools :is(button, a):hover { background: #e2efff; }
+.attendance-tools button { display: inline-flex; align-items: center; min-height: 42px; padding: 6px 10px; border: 1px solid #cddff6; border-radius: 9px; background: #f1f7ff; color: #1e549a; font-size: 12px; font-weight: 670; }
+.attendance-tools button:hover { background: #e2efff; }
 .attendance-tools button:disabled { opacity: .55; }
+.attendance-office-link { color: #1e549a; font-weight: 650; text-decoration: underline; }
 .attendance-actions { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 16px; }
 .attendance-action { display: flex; align-items: center; justify-content: center; gap: 7px; min-height: 46px; padding: 6px 8px; border: 1px solid #cbdcf0; border-radius: 9px; background: #f1f7ff; color: #1e549a; font-size: 12px; font-weight: 690; }
 .attendance-action svg.lucide { flex-shrink: 0; color: inherit; }
