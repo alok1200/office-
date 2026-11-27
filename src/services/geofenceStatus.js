@@ -40,10 +40,12 @@ export function summarizeAttendanceCheck(office, gps) {
   };
 }
 
-export function attendanceLocationFailure(office, { code, message }) {
+export function attendanceLocationFailure(office, { code, message }, { showWifiDiagnostics = true } = {}) {
   const gpsSummary = gpsFallbackMessages[code];
   if (!gpsSummary && code !== 'OUTSIDE_GEOFENCE') return { message };
-  const wifi = officeWifiMessage(office);
+  const wifi = showWifiDiagnostics || !office.wifi_attendance_enabled || office.office_wifi_matched || office.office_lan_url
+    ? officeWifiMessage(office)
+    : 'Office Wi-Fi could not be verified.';
   if (gpsSummary && office.wifi_attendance_enabled && office.office_wifi_matched) {
     return { fallback: true, gpsSummary, message: `${gpsSummary} ${wifi} You can record attendance using office Wi-Fi.` };
   }

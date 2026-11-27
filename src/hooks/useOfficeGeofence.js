@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDataRefresh } from './useDataRefresh';
 
 export function useOfficeGeofence(enabled) {
-  const { currentUserId } = useAuth();
+  const { currentUserId, isHR } = useAuth();
   const [officeState, setOfficeState] = useState(null);
   const [progress, setProgress] = useState(null);
   const session = useRef(null);
@@ -111,7 +111,7 @@ export function useOfficeGeofence(enabled) {
       if (!preferWifi) return summarizeAttendanceCheck(office, evaluation);
 
       if (!evaluation.eligible) {
-        const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation);
+        const { fallback, gpsSummary, message } = attendanceLocationFailure(office, evaluation, { showWifiDiagnostics: isHR });
         if (fallback) return { location: {}, gpsSummary };
         throw Object.assign(new Error(message), { code: evaluation.code });
       }

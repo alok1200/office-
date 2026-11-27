@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
-import { ATTENDANCE_RADIUS_M, attendanceLocationFailure, officeWifiMessage } from '../../services/geofenceStatus';
+import { ATTENDANCE_RADIUS_M, attendanceLocationFailure } from '../../services/geofenceStatus';
 import { useOfficeGeofence } from '../../hooks/useOfficeGeofence';
 import { StatusBadge } from '../Common/StatusBadge';
 import { LogIn, LogOut, Utensils, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
@@ -57,7 +57,7 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
       } else {
         const responseMessage = res.message || res.error || 'Could not record attendance. Please retry.';
         const failure = typeof res.office_wifi_matched === 'boolean'
-          ? attendanceLocationFailure(res, { code: res.error, message: responseMessage }).message
+          ? attendanceLocationFailure(res, { code: res.error, message: responseMessage }, { showWifiDiagnostics: isHR }).message
           : responseMessage;
         setError(latest && latest.current_state !== currentState
           ? `${failure} Your attendance status and available actions have refreshed.`
@@ -92,9 +92,11 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
     <div className="dashboard-surface">
       <div className="attendance-heading">
         <div>
-          <h2>Attendance Punch Controls</h2>
+          <h2>{isHR ? 'Attendance Punch Controls' : 'Attendance'}</h2>
           <p id="attendance-location-policy">
-            GPS verification uses the {ATTENDANCE_RADIUS_M} m office boundary. {geofence.office?.wifi_attendance_enabled && 'Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.'}
+            {isHR
+              ? `GPS verification uses the ${ATTENDANCE_RADIUS_M} m office boundary.${geofence.office?.wifi_attendance_enabled ? ' Registered office Wi-Fi verifies check-in, breaks, and check-out without waiting for GPS.' : ''}`
+              : 'Your location is verified automatically when you record attendance.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -103,13 +105,13 @@ export function PunchControls({ todayData, onRefresh, loading = false }) {
         </div>
       </div>
 
-      {canRecord && (
+      {canRecord && (isHR || geofence.office?.wifi_attendance_enabled || geofence.office?.office_lan_url) && (
         <div className="attendance-tools">
-          {geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
-          {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match" role="status">Office Wi-Fi matched</p>}
+          {isHR && geofence.office?.name && <p>{geofence.office.name} · GPS accuracy ±{geofence.office.max_accuracy_m} m or better</p>}
+          {geofence.office?.office_wifi_matched && <p className="attendance-wifi-match" role="status">Office Wi-Fi verified</p>}
           {geofence.office?.office_lan_url && <p><a className="attendance-office-link" href={geofence.office.office_lan_url}>Open the office Wi-Fi attendance link</a></p>}
           {!isHR && geofence.office?.wifi_attendance_enabled && !geofence.office.office_wifi_matched && !geofence.office.office_lan_url && (
-            <p role="status">{officeWifiMessage(geofence.office)}</p>
+            <p role="status">Office Wi-Fi could not be verified. You can still use GPS to record attendance.</p>
           )}
           {isHR && (
             <>
