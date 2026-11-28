@@ -183,13 +183,10 @@ export function AttendanceCalendar() {
                 className={`h-24 sm:h-28 p-2.5 rounded-xl cursor-pointer transition-all flex flex-col justify-between shadow-xs ${getDayCardStyles(item)}`}
               >
                 <div className="flex items-center justify-between">
-                  <span className={`text-sm font-black ${isToday ? (solid ? 'bg-white text-blue-700 w-6 h-6 rounded-full flex items-center justify-center text-xs' : 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs') : (solid ? 'text-white' : 'text-black')}`}>
+                  <span className={`text-sm font-black ${isToday ? (solid ? 'bg-white text-red-700 w-6 h-6 rounded-full flex items-center justify-center text-xs' : 'bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs') : (solid ? 'text-white' : 'text-black')}`}>
                     {item.day}
                   </span>
                   <div className="flex items-center gap-1">
-                    {item.decision?.status === 'REJECTED' && (
-                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-red-600 text-white">Rejected</span>
-                    )}
                     {getStatusDotColor(item) && <span className={`w-2 h-2 rounded-full ${getStatusDotColor(item)}`} />}
                   </div>
                 </div>
@@ -199,7 +196,7 @@ export function AttendanceCalendar() {
                     {style?.label || (item.status === 'NOT_APPLICABLE' ? '—' : item.status.replaceAll('_', ' '))}
                   </p>
                   {item.statusDetails && (
-                    <p className={`text-[10px] truncate font-medium ${solid ? 'text-blue-100' : 'text-slate-500'}`} title={item.statusDetails}>
+                    <p className={`text-[10px] truncate font-medium ${solid ? 'text-red-100' : 'text-slate-500'}`} title={item.statusDetails}>
                       {item.statusDetails}
                     </p>
                   )}
@@ -210,7 +207,7 @@ export function AttendanceCalendar() {
                   )}
                 </div>
 
-                <div className={`text-[10px] flex items-center justify-between ${solid ? 'text-blue-100' : 'text-slate-500'}`}>
+                <div className={`text-[10px] flex items-center justify-between ${solid ? 'text-red-100' : 'text-slate-500'}`}>
                   {isToday ? <span className={`font-bold ${solid ? 'text-white' : 'text-blue-600'}`}>Today</span> : <span />}
                   <span className={`${solid ? 'text-white' : 'text-blue-600'} hover:underline text-[9px] font-bold`}>Details &rarr;</span>
                 </div>

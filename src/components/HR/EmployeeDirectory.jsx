@@ -12,7 +12,7 @@ const day = value => value ? String(value).slice(0, 10) : '—';
 
 export function EmployeeDirectory({ openAdd = false }) {
   const { currentUserId, isHR, isSuperAdmin } = useAuth();
-  const canAddEmployee = isHR || isSuperAdmin;
+  const canAddEmployee = isHR;
   const canManageAccount = (emp) => (isHR && emp.role === 'EMPLOYEE') || (isSuperAdmin && emp.role === 'HR_ADMIN');
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
