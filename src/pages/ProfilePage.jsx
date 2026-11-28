@@ -4,19 +4,47 @@ import { api } from '../services/api';
 import { assetTypeLabel } from '../components/HR/AddEmployeeModal';
 import { User, Mail, Phone, Calendar, Building, Shield, CheckCircle, Laptop } from 'lucide-react';
 
-export function ProfilePage() {
-  const { currentUser } = useAuth();
+function ProfileInventory() {
   const [assets, setAssets] = useState({ loading: true, rows: [], error: '' });
 
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'HR_ADMIN') { setAssets({ loading: false, rows: [], error: '' }); return; }
     let active = true;
     api.getMyAssets().then(res => {
       if (!res.success) throw new Error(res.error || 'Could not load your assets.');
       if (active) setAssets({ loading: false, rows: res.data, error: '' });
     }).catch(error => { if (active) setAssets({ loading: false, rows: [], error: error.message }); });
     return () => { active = false; };
-  }, [currentUser?.id]);
+  }, []);
+
+  return (
+    <section className="p-4 rounded-xl bg-white border border-slate-200 space-y-3">
+      <h3 className="text-sm font-bold text-black flex items-center gap-2">
+        <Laptop className="w-4 h-4 text-blue-600" aria-hidden="true" />
+        My Inventory
+      </h3>
+      {assets.loading ? <p role="status" className="text-xs text-slate-600">Loading inventory…</p>
+        : assets.error ? <p role="alert" className="text-xs text-rose-700">{assets.error}</p>
+        : !assets.rows.length ? <p className="text-xs text-slate-600">No equipment has been assigned to you.</p>
+        : <ul className="grid gap-2 sm:grid-cols-2">{assets.rows.map(asset => (
+          <li key={asset.id} className="min-w-0 break-words text-xs border border-slate-200 rounded-lg p-3 space-y-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-bold text-black">{asset.asset_name}</p>
+              <span className={`rounded-full px-2 py-0.5 font-semibold ${asset.returned_date ? 'bg-slate-100 text-slate-700' : 'bg-blue-50 text-blue-800'}`}>
+                {asset.returned_date ? 'Returned' : 'Assigned'}
+              </span>
+            </div>
+            <p className="text-slate-600">{[assetTypeLabel(asset.asset_type), asset.asset_tag && `Tag ${asset.asset_tag}`, asset.serial_number && `S/N ${asset.serial_number}`].filter(Boolean).join(' · ')}</p>
+            <p className="text-slate-600">
+              Issued {asset.issued_date.slice(0, 10)}{asset.returned_date && ` · Returned ${asset.returned_date.slice(0, 10)}`}
+            </p>
+          </li>
+        ))}</ul>}
+    </section>
+  );
+}
+
+export function ProfilePage() {
+  const { currentUser } = useAuth();
 
   if (!currentUser) return null;
 
@@ -93,6 +121,10 @@ export function ProfilePage() {
           </div>
         </div>
 
+        {(currentUser.role === 'EMPLOYEE' || currentUser.role === 'HR_ADMIN') && (
+          <ProfileInventory key={currentUser.id} />
+        )}
+
         {/* Permissions & Rules Card */}
         <div className="p-4 rounded-xl bg-white border border-blue-200 shadow-2xs space-y-2">
           <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5">
@@ -116,25 +148,6 @@ export function ProfilePage() {
             )}
           </ul>
         </div>
-
-        {currentUser.role === 'HR_ADMIN' && (
-          <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs space-y-2">
-            <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5">
-              <Laptop className="w-4 h-4 text-blue-600" />
-              <span>My Company Assets</span>
-            </h4>
-            {assets.loading ? <p className="text-xs text-slate-500">Loading assets…</p>
-              : assets.error ? <p role="alert" className="text-xs text-rose-700">{assets.error}</p>
-              : !assets.rows.length ? <p className="text-xs text-slate-500">No company assets are assigned to you.</p>
-              : <ul className="space-y-2">{assets.rows.map(asset => (
-                <li key={asset.id} className="text-xs border border-slate-200 rounded-lg p-3">
-                  <p className="font-black text-black">{asset.asset_name} <span className="font-medium text-slate-500">· {assetTypeLabel(asset.asset_type)}</span></p>
-                  <p className="text-slate-600">{asset.asset_tag ? `Tag ${asset.asset_tag}` : 'No tag'}{asset.serial_number ? ` · S/N ${asset.serial_number}` : ''}</p>
-                  <p className="text-slate-600">Issued {String(asset.issued_date).slice(0, 10)}{asset.returned_date ? ` · Returned ${String(asset.returned_date).slice(0, 10)}` : ' · In your possession'}</p>
-                </li>
-              ))}</ul>}
-          </div>
-        )}
       </div>
     </div>
   );

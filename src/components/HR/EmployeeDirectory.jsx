@@ -12,6 +12,7 @@ const day = value => value ? String(value).slice(0, 10) : '—';
 
 export function EmployeeDirectory({ openAdd = false }) {
   const { currentUserId, isHR, isSuperAdmin } = useAuth();
+  const canAddEmployee = isHR || isSuperAdmin;
   const canManageAccount = (emp) => (isHR && emp.role === 'EMPLOYEE') || (isSuperAdmin && emp.role === 'HR_ADMIN');
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -181,7 +182,7 @@ export function EmployeeDirectory({ openAdd = false }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          {isHR && <button type="button" className="ui-button-primary" onClick={() => { setNotice(''); setAdding(true); }}>
+          {canAddEmployee && <button type="button" className="ui-button-primary" onClick={() => { setNotice(''); setAdding(true); }}>
             <UserPlus className="w-4 h-4" /><span>Add Employee</span>
           </button>}
           {/* Department Filter */}
@@ -458,7 +459,7 @@ export function EmployeeDirectory({ openAdd = false }) {
           </div>
         </Modal>
       )}
-      {isHR && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
+      {canAddEmployee && adding && <AddEmployeeModal onClose={() => setAdding(false)} onSaved={message => { setAdding(false); setNotice(message); fetchEmployees(); }} />}
       {isHR && editEmp && <EditEmployeeModal employee={editEmp} onClose={() => setEditEmp(null)} onSaved={message => { setEditEmp(null); setNotice(message); fetchEmployees(); }} />}
 
       {(isHR || isSuperAdmin) && resetEmp && (

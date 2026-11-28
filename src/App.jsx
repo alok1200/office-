@@ -78,10 +78,10 @@ function AppContent() {
   }
 
   const renderPage = () => {
-    const companyTabs = ['hr-employees', 'hr-attendance', 'hr-company-requests', 'payroll-dashboard', 'payroll-salaries', 'payroll-calculation', 'payroll-history'];
+    const companyTabs = ['hr-employees', 'hr-add-employee', 'hr-attendance', 'hr-company-requests', 'payroll-dashboard', 'payroll-salaries', 'payroll-calculation', 'payroll-history'];
     const adminTabs = ['admin', 'office-location', 'admin-approvals'];
     const ticketTab = currentTab === 'tickets' && !isHR && !isSuperAdmin;
-    if (ticketTab || (currentTab === 'hr-add-employee' && !isHR) ||
+    if (ticketTab ||
         (companyTabs.includes(currentTab) && !isHR && !isSuperAdmin) ||
         (adminTabs.includes(currentTab) && !isSuperAdmin)) {
       return <p role="alert">You do not have access to this page.</p>;

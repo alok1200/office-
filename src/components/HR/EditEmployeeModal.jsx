@@ -103,7 +103,7 @@ export function EditEmployeeModal({ employee, onClose, onSaved }) {
         <fieldset className="space-y-3" disabled={busy}>
           <legend className="text-sm font-black text-black mb-2">Employment</legend>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Employee ID">{textInput('employee_id', { required: true, maxLength: 50 })}</Field>
+            <Field label="Employee ID" hint="New IDs must use the KI format, such as KI123456.">{textInput('employee_id', { required: true, maxLength: 50 })}</Field>
             <Field label="Joining date">{textInput('joining_date', { type: 'date', required: true })}</Field>
             <Field label="Department"><select className={inputClass} value={form.department_name} onChange={e => set('department_name', e.target.value)}>{DEPARTMENTS.map(d => <option key={d}>{d}</option>)}<option value={OTHER_DEPARTMENT}>Other (type a new department)…</option></select></Field>
             {form.department_name === OTHER_DEPARTMENT && <Field label="Department name"><input className={inputClass} required maxLength={100} value={otherDepartment} disabled={busy} onChange={e => setOtherDepartment(e.target.value)} placeholder="e.g. Customer Support" /></Field>}

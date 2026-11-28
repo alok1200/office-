@@ -9,6 +9,8 @@ export const ASSET_TYPES = [
 ];
 export const ASSET_CONDITIONS = [['NEW', 'New'], ['GOOD', 'Good'], ['FAIR', 'Fair'], ['POOR', 'Poor']];
 export const DEPARTMENTS = ['Software development', 'Hr department', 'Digital marketing', 'Sales and distribution', 'Marketing'];
+export const employeeIdInput = { required: true, maxLength: 8, pattern: '(?:[Kk][Ii])?[0-9]{6}', placeholder: 'KI123456', autoCapitalize: 'characters', spellCheck: false };
+export const employeeIdHint = 'Enter six digits, with or without the KI prefix.';
 const OTHER_DEPARTMENT = '__OTHER__';
 export const assetTypeLabel = value => (ASSET_TYPES.find(([id]) => id === value) || [, value])[1];
 
@@ -96,7 +98,7 @@ export function AddEmployeeModal({ onClose, onSaved }) {
       <fieldset className="space-y-3" disabled={busy}>
         <legend className="text-sm font-black text-black mb-2">Employment</legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Employee ID">{text('employee_id', { required: true, maxLength: 50, placeholder: 'e.g. KNV-1010' })}</Field>
+          <Field label="Employee ID" hint={employeeIdHint}>{text('employee_id', employeeIdInput)}</Field>
           <Field label="Joining date">{text('joining_date', { type: 'date', required: true })}</Field>
           <Field label="Department"><select className={inputClass} value={form.department_name} onChange={e => set('department_name', e.target.value)}>{DEPARTMENTS.map(d => <option key={d}>{d}</option>)}<option value={OTHER_DEPARTMENT}>Other (type a new department)…</option></select></Field>
           {form.department_name === OTHER_DEPARTMENT && <Field label="New department name"><input className={inputClass} required maxLength={100} value={otherDepartment} disabled={busy} onChange={e => setOtherDepartment(e.target.value)} placeholder="e.g. Customer Support" autoFocus /></Field>}

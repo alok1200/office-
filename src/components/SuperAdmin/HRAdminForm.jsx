@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, X } from 'lucide-react';
 import { api } from '../../services/api';
+import { employeeIdHint, employeeIdInput } from '../HR/AddEmployeeModal';
 
 export function HRAdminForm({ onClose, onSaved }) {
-  const [form, setForm] = useState({ first_name: '', last_name: '', email: '', password: '', department_name: 'Hr department', designation: 'HR Admin' });
+  const [form, setForm] = useState({ employee_id: '', first_name: '', last_name: '', email: '', password: '', department_name: 'Hr department', designation: 'HR Admin' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const panel = useRef(null), busy = useRef(false), mounted = useRef(true);
@@ -28,7 +29,7 @@ export function HRAdminForm({ onClose, onSaved }) {
     try {
       const response = await api.createHRAdmin(form);
       if (!response.success) throw new Error(response.error || 'Could not create HR Admin.');
-      if (mounted.current) onSaved(`HR Admin ${response.data.first_name} ${response.data.last_name} created. Sign in with ${response.data.email} and the password you assigned.`);
+      if (mounted.current) onSaved(`HR Admin ${response.data.first_name} ${response.data.last_name} (${response.data.employee_id}) created.`);
     } catch (error) { if (mounted.current) setError(error.message); }
     finally { busy.current = false; if (mounted.current) setSaving(false); }
   };
@@ -38,7 +39,11 @@ export function HRAdminForm({ onClose, onSaved }) {
       <h2 id="create-hr-title">Create HR Admin</h2>
       <p>Assign a work email and password. This account will open the HR Admin portal when it signs in.</p>
       <form onSubmit={save}>
-        {error && <p role="alert" className="sa-request-error">{error}</p>}
+        <div>
+          <label htmlFor="hr-admin-employee-id">Employee ID</label>
+          <input id="hr-admin-employee-id" {...employeeIdInput} aria-describedby="hr-admin-employee-id-hint" value={form.employee_id} onChange={event => setForm(old => ({ ...old, employee_id: event.target.value }))} disabled={saving} />
+          <small id="hr-admin-employee-id-hint">{employeeIdHint}</small>
+        </div>
         {[
           ['first_name', 'First name', 'text', 100, 'given-name'],
           ['last_name', 'Last name', 'text', 100, 'family-name'],
@@ -50,6 +55,7 @@ export function HRAdminForm({ onClose, onSaved }) {
           <label htmlFor={`hr-admin-${key}`}>{label}</label>
           <input id={`hr-admin-${key}`} type={type} value={form[key]} onChange={event => setForm(old => ({ ...old, [key]: event.target.value }))} required minLength={key === 'password' ? 8 : 1} maxLength={maxLength} autoComplete={autoComplete} disabled={saving} />
         </div>)}
+        {error && <p role="alert" className="sa-request-error">{error}</p>}
         <div className="sa-request-submit"><button type="button" className="sa-office-cancel-form" onClick={onClose} disabled={saving}>Cancel</button><button type="submit" className="sa-request-primary" disabled={saving}>{saving && <Loader2 size={16} className="animate-spin" />}{saving ? 'Creating…' : 'Create HR Admin'}</button></div>
       </form>
     </section>
