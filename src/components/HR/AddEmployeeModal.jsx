@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { cloneElement, useId, useRef, useState } from 'react';
 import { AlertCircle, Loader2, Plus, Trash2, UserPlus } from 'lucide-react';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
@@ -17,9 +17,16 @@ export const blankAsset = () => ({ asset_type: 'LAPTOP', asset_name: '', asset_t
 const inputClass = 'w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white text-black shadow-2xs';
 const labelClass = 'block text-xs font-black text-black uppercase tracking-wider mb-1.5';
 
-function Field({ label, children }) {
-  return <div><label className={labelClass}>{label}</label>{children}</div>;
+function Field({ label, hint, children }) {
+  const id = useId();
+  const hintId = `${id}-hint`;
+  return <div>
+    <label className={labelClass} htmlFor={id}>{label}</label>
+    {cloneElement(children, { id, 'aria-describedby': hint ? hintId : undefined })}
+    {hint && <p className="mt-1 text-xs text-slate-600" id={hintId}>{hint}</p>}
+  </div>;
 }
+export { Field as EmployeeField };
 
 /** Reusable fields for one asset; used here and when issuing an asset to an existing employee. */
 export function AssetFields({ asset, onChange, disabled }) {
@@ -41,6 +48,7 @@ export function AddEmployeeModal({ onClose, onSaved }) {
     joining_date: today(), date_of_birth: '', address: '', emergency_contact_name: '', emergency_contact_phone: ''
   });
   const [assets, setAssets] = useState([]);
+  const nextAssetId = useRef(0);
   const [customFields, setCustomFields] = useState([]);
   const [otherDepartment, setOtherDepartment] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,6 +56,10 @@ export function AddEmployeeModal({ onClose, onSaved }) {
   const locked = useRef(false);
   const set = (key, value) => setForm(old => ({ ...old, [key]: value }));
   const text = (key, props = {}) => <input className={inputClass} value={form[key]} disabled={busy} onChange={e => set(key, e.target.value)} {...props} />;
+  const addAsset = () => {
+    const item = { id: ++nextAssetId.current, asset: blankAsset() };
+    setAssets(list => [...list, item]);
+  };
 
   const submit = async event => {
     event.preventDefault();
@@ -56,17 +68,16 @@ export function AddEmployeeModal({ onClose, onSaved }) {
     try {
       const department_name = form.department_name === OTHER_DEPARTMENT ? otherDepartment.trim() : form.department_name;
       if (!department_name) throw new Error('Enter the new department name.');
-      const res = await api.createEmployee({ ...form, department_name, custom_fields: customFields, assets });
+      const res = await api.createEmployee({ ...form, department_name, custom_fields: customFields, assets: assets.map(item => item.asset) });
       if (!res.success) throw new Error(res.error || 'Could not add the employee.');
-      onSaved(res.message);
+      const count = res.data?.assets?.length || 0;
+      onSaved([res.message, count ? `${count} inventory item${count === 1 ? '' : 's'} assigned.` : ''].filter(Boolean).join(' '));
     } catch (err) { setError(err.message); }
     finally { locked.current = false; setBusy(false); }
   };
 
   return <Modal isOpen onClose={() => { if (!locked.current) onClose(); }} title="Add new employee" maxWidth="max-w-3xl">
     <form onSubmit={submit} className="space-y-6 bg-white text-black">
-      {error && <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0" /><span className="font-semibold text-rose-700">{error}</span></div>}
-
       <fieldset className="space-y-3" disabled={busy}>
         <legend className="text-sm font-black text-black mb-2">Personal &amp; login details</legend>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -74,11 +85,11 @@ export function AddEmployeeModal({ onClose, onSaved }) {
           <Field label="Last name">{text('last_name', { required: true, maxLength: 100 })}</Field>
           <Field label="Work email">{text('email', { type: 'email', required: true, maxLength: 255, autoComplete: 'off' })}</Field>
           <Field label="Password">{text('password', { type: 'password', required: true, minLength: 8, maxLength: 128, autoComplete: 'new-password', placeholder: 'At least 8 characters' })}</Field>
-          <Field label="Phone">{text('phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
+          <Field label="Mobile number" hint="With or without a country code.">{text('phone', { type: 'tel', autoComplete: 'tel', required: true, maxLength: 50, placeholder: '+91 98765 43210' })}</Field>
           <Field label="Date of birth">{text('date_of_birth', { type: 'date', required: true, max: today() })}</Field>
           <div className="sm:col-span-2"><Field label="Address"><textarea className={inputClass} rows={2} required maxLength={500} value={form.address} onChange={e => set('address', e.target.value)} /></Field></div>
           <Field label="Emergency contact name">{text('emergency_contact_name', { required: true, maxLength: 150 })}</Field>
-          <Field label="Emergency contact phone">{text('emergency_contact_phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
+          <Field label="Emergency contact number">{text('emergency_contact_phone', { type: 'tel', required: true, maxLength: 50, placeholder: '98765 43210' })}</Field>
         </div>
       </fieldset>
 
@@ -94,6 +105,20 @@ export function AddEmployeeModal({ onClose, onSaved }) {
         <p className="text-xs text-slate-600">New accounts are created with the Employee role. Ask the employee to change the temporary password after first sign-in.</p>
       </fieldset>
 
+      <fieldset className="space-y-3 rounded-xl border border-slate-200 p-4" disabled={busy}>
+        <legend className="px-1 text-sm font-black text-black">Assigned inventory</legend>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-slate-600">Optional. Assign laptops, phones, access cards, or other company equipment.</p>
+          {assets.length < 25 && <button type="button" className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50" onClick={addAsset}><Plus size={14} aria-hidden="true" />Add inventory item</button>}
+        </div>
+        {assets.map(({ id, asset }, index) => <div key={id} className="p-3 rounded-xl border border-slate-200 space-y-3">
+          <div className="flex items-center justify-between gap-2"><strong className="text-xs">Item {index + 1}</strong>
+            <button type="button" className="sa-text-button flex items-center gap-1 text-xs" aria-label={`Remove inventory item ${index + 1}`} onClick={() => setAssets(list => list.filter(item => item.id !== id))}><Trash2 size={14} aria-hidden="true" />Remove</button>
+          </div>
+          <AssetFields asset={asset} disabled={busy} onChange={next => setAssets(list => list.map(item => item.id === id ? { ...item, asset: next } : item))} />
+        </div>)}
+      </fieldset>
+
       <fieldset className="space-y-3" disabled={busy}>
         <legend className="text-sm font-black text-black mb-2">Others (extra fields)</legend>
         {!customFields.length && <p className="text-xs text-slate-600">Need to record something not listed above (blood group, PAN, bank account, previous employer…)? Add your own field.</p>}
@@ -105,17 +130,7 @@ export function AddEmployeeModal({ onClose, onSaved }) {
         {customFields.length < 20 && <button type="button" className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50" onClick={() => setCustomFields(list => [...list, { label: '', value: '' }])}><Plus size={14} />Add another field</button>}
       </fieldset>
 
-      <fieldset className="space-y-3" disabled={busy}>
-        <legend className="text-sm font-black text-black mb-2">Company assets issued</legend>
-        {!assets.length && <p className="text-xs text-slate-600">No assets added. Add laptops, access cards, phones and other equipment handed to this employee.</p>}
-        {assets.map((asset, index) => <div key={index} className="p-4 rounded-xl border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between"><strong className="text-xs">Asset {index + 1}</strong>
-            <button type="button" className="sa-text-button flex items-center gap-1 text-xs" onClick={() => setAssets(list => list.filter((_, i) => i !== index))}><Trash2 size={14} />Remove</button></div>
-          <AssetFields asset={asset} disabled={busy} onChange={next => setAssets(list => list.map((a, i) => i === index ? next : a))} />
-        </div>)}
-        {assets.length < 25 && <button type="button" className="px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-50" onClick={() => setAssets(list => [...list, blankAsset()])}><Plus size={14} />Add asset</button>}
-      </fieldset>
-
+      {error && <div role="alert" className="p-3 bg-white border border-rose-300 rounded-xl text-xs flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-600 shrink-0" /><span className="font-semibold text-rose-700">{error}</span></div>}
       <div className="ticket-form-actions flex justify-end gap-3">
         <button type="button" onClick={onClose} disabled={busy}>Cancel</button>
         <button className="ui-button-primary" disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}<span>{busy ? 'Saving…' : 'Add employee'}</span></button>

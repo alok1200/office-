@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
 import { StatusBadge } from '../Common/StatusBadge';
-import { Search, Mail, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop, KeyRound, Trash2, Edit2 } from 'lucide-react';
+import { Search, Mail, Phone, Calendar, Eye, AlertCircle, Building, UserPlus, Plus, Laptop, KeyRound, Trash2, Edit2 } from 'lucide-react';
 import { AddEmployeeModal, AssetFields, blankAsset, assetTypeLabel } from './AddEmployeeModal';
 import { EditEmployeeModal } from './EditEmployeeModal';
 
@@ -262,6 +262,12 @@ export function EmployeeDirectory({ openAdd = false }) {
                     <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span className="truncate">{emp.email}</span>
                   </div>
+                  {emp.phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-3.5 h-3.5 text-blue-600 shrink-0" aria-hidden="true" />
+                      <span><span className="sr-only">Mobile number </span>{emp.phone}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                     <span>Joined: {new Date(emp.joining_date).toLocaleDateString()}</span>
@@ -280,7 +286,7 @@ export function EmployeeDirectory({ openAdd = false }) {
                     className="px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-blue-50 text-black text-xs font-bold flex items-center gap-1.5 transition-colors shadow-2xs shrink-0"
                   >
                     <Eye className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Inspect History</span>
+                    <span>{isHR ? 'View details' : 'Inspect History'}</span>
                   </button>
                 </div>
                 {canManageAccount(emp) && (
@@ -415,7 +421,7 @@ export function EmployeeDirectory({ openAdd = false }) {
 
             {isHR && <div>
               <div className="flex items-center justify-between mb-2">
-                <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5"><Laptop className="w-4 h-4 text-blue-600" />Company Assets</h4>
+                <h4 className="text-xs font-black text-black uppercase tracking-wider flex items-center gap-1.5"><Laptop className="w-4 h-4 text-blue-600" />Assigned inventory</h4>
                 {!newAsset && <button type="button" className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-bold flex items-center gap-1 hover:bg-blue-50" onClick={() => { setAssetError(''); setNewAsset(blankAsset()); }}><Plus className="w-3.5 h-3.5 text-blue-600" />Issue asset</button>}
               </div>
               {assetError && <p role="alert" className="mb-2 text-xs font-semibold text-rose-700">{assetError}</p>}

@@ -17,7 +17,6 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { StatusBadge } from '../components/Common/StatusBadge';
 import { DashboardHeader, DashboardMetric, DashboardShortcut, dashboardDate } from '../components/Dashboard/DashboardElements';
-import { PersonalAttendance } from '../components/Employee/PersonalAttendance';
 
 const todayISO = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
 
@@ -38,7 +37,7 @@ const statusText = {
 };
 
 export function HRDashboardPage({ setTab }) {
-  const { currentUserId, isHR } = useAuth();
+  const { currentUserId } = useAuth();
   const [summary, setSummary] = useState(null);
   const [attendance, setAttendance] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -172,13 +171,6 @@ export function HRDashboardPage({ setTab }) {
           {statCards.map(card => <DashboardMetric key={card.label} label={card.label} value={card.value} detail={card.sub} icon={card.icon} tone={card.tone} onClick={card.onClick} />)}
         </div>
       </section>
-
-      {isHR && (
-        <section className="dashboard-section" aria-labelledby="hr-personal-attendance">
-          <h2 id="hr-personal-attendance" className="dashboard-section-title">My attendance</h2>
-          <PersonalAttendance />
-        </section>
-      )}
 
       <section className="dashboard-section" aria-labelledby="hr-shortcuts-heading">
         <h2 id="hr-shortcuts-heading" className="dashboard-section-title">Quick actions</h2>

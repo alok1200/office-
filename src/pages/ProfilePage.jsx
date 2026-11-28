@@ -70,7 +70,7 @@ export function ProfilePage() {
             <Phone className="w-4 h-4 text-blue-600 mt-0.5" />
             <div>
               <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Phone Number</p>
-              <p className="text-sm font-bold text-black mt-0.5">{currentUser.phone || '+1 (555) 000-0000'}</p>
+              <p className="text-sm font-bold text-black mt-0.5">{currentUser.phone || 'No mobile number on file'}</p>
             </div>
           </div>
 

@@ -13,7 +13,7 @@ export function DashboardPage({ setTab }) {
 
   return (
     <div className="dashboard-page">
-      <DashboardHeader title="Today’s attendance" context={dashboardDate()} description="Record your shift and breaks, or check your office connection." />
+      <DashboardHeader title="Today’s attendance" context={dashboardDate()} description="Shift hours · 11:00 AM–8:00 PM IST" />
       <PersonalAttendance />
       <section className="dashboard-section" aria-labelledby="workday-shortcuts">
         <h2 id="workday-shortcuts" className="dashboard-section-title">Your workday</h2>

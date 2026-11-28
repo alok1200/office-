@@ -2,17 +2,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, Loader2, Plus, Save, Trash2 } from 'lucide-react';
 import { api } from '../../services/api';
 import { Modal } from '../Common/Modal';
-import { DEPARTMENTS } from './AddEmployeeModal';
+import { DEPARTMENTS, EmployeeField as Field } from './AddEmployeeModal';
 
 const OTHER_DEPARTMENT = '__OTHER__';
 const today = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
 const dateStr = value => value ? String(value).slice(0, 10) : '';
 const inputClass = 'w-full px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white text-black shadow-2xs';
-const labelClass = 'block text-xs font-black text-black uppercase tracking-wider mb-1.5';
-
-function Field({ label, children }) {
-  return <div><label className={labelClass}>{label}</label>{children}</div>;
-}
 
 export function EditEmployeeModal({ employee, onClose, onSaved }) {
   const isPresetDept = DEPARTMENTS.includes(employee.department_name);
@@ -97,11 +92,11 @@ export function EditEmployeeModal({ employee, onClose, onSaved }) {
             <Field label="First name">{textInput('first_name', { required: true, maxLength: 100 })}</Field>
             <Field label="Last name">{textInput('last_name', { required: true, maxLength: 100 })}</Field>
             <Field label="Work email">{textInput('email', { type: 'email', required: true, maxLength: 255 })}</Field>
-            <Field label="Phone">{textInput('phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
+            <Field label="Mobile number" hint="With or without a country code.">{textInput('phone', { type: 'tel', autoComplete: 'tel', required: true, maxLength: 50 })}</Field>
             <Field label="Date of birth">{textInput('date_of_birth', { type: 'date', required: true, max: today() })}</Field>
             <div className="sm:col-span-2"><Field label="Address"><textarea className={inputClass} rows={2} required maxLength={500} value={form.address} onChange={e => set('address', e.target.value)} /></Field></div>
             <Field label="Emergency contact name">{textInput('emergency_contact_name', { required: true, maxLength: 150 })}</Field>
-            <Field label="Emergency contact phone">{textInput('emergency_contact_phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
+            <Field label="Emergency contact number">{textInput('emergency_contact_phone', { type: 'tel', required: true, maxLength: 50 })}</Field>
           </div>
         </fieldset>
 
