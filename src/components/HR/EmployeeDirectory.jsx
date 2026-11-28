@@ -233,21 +233,14 @@ export function EmployeeDirectory({ openAdd = false }) {
             >
               <div>
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={emp.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
-                      alt={emp.first_name}
-                      className="w-12 h-12 rounded-xl object-cover ring-2 ring-blue-100"
-                    />
-                    <div>
-                      <h4 className="text-sm font-black text-black leading-tight">
-                        {emp.first_name} {emp.last_name}
-                      </h4>
-                      <p className="text-[11px] text-slate-600 font-medium mt-0.5">{emp.designation}</p>
-                      <span className="inline-block text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-white text-black border border-slate-200 mt-1">
-                        {emp.employee_id}
-                      </span>
-                    </div>
+                  <div>
+                    <h4 className="text-sm font-black text-black leading-tight">
+                      {emp.first_name} {emp.last_name}
+                    </h4>
+                    <p className="text-[11px] text-slate-600 font-medium mt-0.5">{emp.designation}</p>
+                    <span className="inline-block text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-white text-black border border-slate-200 mt-1">
+                      {emp.employee_id}
+                    </span>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-black border border-slate-300">
                     {emp.role === 'HR_ADMIN' ? 'HR' : emp.role === 'SUPER_ADMIN' ? 'Admin' : 'Staff'}
@@ -344,12 +337,7 @@ export function EmployeeDirectory({ openAdd = false }) {
             </div>
 
             {/* Profile Summary */}
-            <div className="flex items-center gap-4 p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
-              <img
-                src={inspectedEmp.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120'}
-                alt={inspectedEmp.first_name}
-                className="w-14 h-14 rounded-xl object-cover ring-2 ring-blue-200 shadow-xs"
-              />
+            <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-2xs">
               <div className="space-y-0.5">
                 <h3 className="text-base font-black text-black">
                   {inspectedEmp.first_name} {inspectedEmp.last_name}

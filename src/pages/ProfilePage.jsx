@@ -62,12 +62,7 @@ export function ProfilePage() {
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 space-y-6">
         {/* Profile Card Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-5 pb-6 border-b border-slate-200">
-          <img
-            src={currentUser.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'}
-            alt={currentUser.first_name}
-            className="w-20 h-20 rounded-2xl object-cover ring-4 ring-blue-100 shadow-md"
-          />
+        <div className="pb-6 border-b border-slate-200">
           <div>
             <div className="flex items-center gap-2.5">
               <h3 className="text-xl font-black text-black">

@@ -391,38 +391,24 @@ export function SuperAdminTicketsPage() {
             >
               {/* Card Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                <div className="flex items-center gap-3">
-                  {req.avatar_url ? (
-                    <img
-                      src={req.avatar_url}
-                      alt=""
-                      className="w-10 h-10 rounded-full object-cover border border-slate-200"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-700 font-bold flex items-center justify-center text-xs border border-blue-200">
-                      {req.first_name?.[0]}
-                      {req.last_name?.[0]}
-                    </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-black text-black">
-                        {req.first_name} {req.last_name}
-                      </h3>
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${
-                          req.employee_role === 'HR_ADMIN'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        {req.employee_role === 'HR_ADMIN' ? 'HR Admin' : 'Employee'}
-                      </span>
-                    </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-black">
+                      {req.first_name} {req.last_name}
+                    </h3>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold border ${
+                        req.employee_role === 'HR_ADMIN'
+                          ? 'bg-blue-50 text-blue-700 border-blue-200'
+                          : 'bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {req.employee_role === 'HR_ADMIN' ? 'HR Admin' : 'Employee'}
+                    </span>
+                  </div>
                     <p className="text-xs text-slate-500 font-medium">
                       {req.emp_code} · {req.designation || 'Staff'} ({req.department_name})
                     </p>
-                  </div>
                 </div>
 
                 <div className="flex items-center gap-2">
