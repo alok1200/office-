@@ -83,14 +83,18 @@ export function AttendanceCalendar() {
     const isToday = dayItem.date === todayStr;
     const isSunday = dayItem.dayOfWeek === 0 || dayItem.status === 'WEEKLY_OFF';
     const todayRing = isToday ? 'ring-2 ring-blue-600 ring-offset-2' : '';
-    if (isSunday) return `${todayRing} border border-slate-200 text-black bg-white hover:bg-slate-50`;
+    if (isSunday) {
+      return isSuperAdmin
+        ? `${todayRing} bg-red-50 hover:bg-red-100 border border-red-300 border-l-4 border-l-red-600 text-red-700`
+        : `${todayRing} border border-slate-200 text-black bg-white hover:bg-slate-50`;
+    }
     const style = getCalendarStatus(dayItem.status);
     if (style?.card) return `${todayRing} ${style.card}`;
     return `${todayRing} border border-slate-200 text-black bg-white hover:bg-slate-50`;
   };
 
   const getStatusDotColor = (dayItem) => {
-    if (dayItem.dayOfWeek === 0 || dayItem.status === 'WEEKLY_OFF') return null;
+    if (dayItem.dayOfWeek === 0 || dayItem.status === 'WEEKLY_OFF') return isSuperAdmin ? 'bg-red-600' : null;
     return getCalendarStatus(dayItem.status)?.dot;
   };
 
@@ -159,7 +163,7 @@ export function AttendanceCalendar() {
         {/* Days of week header */}
         <div className="grid grid-cols-7 gap-2 mb-3 text-center">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((dw, i) => (
-            <div key={dw} className={`text-xs font-bold py-2 ${i === 0 || i === 6 ? 'text-slate-400' : 'text-black'}`}>
+            <div key={dw} className={`text-xs font-bold py-2 ${i === 0 && isSuperAdmin ? 'text-red-600' : (i === 0 || i === 6 ? 'text-slate-400' : 'text-black')}`}>
               {dw}
             </div>
           ))}
